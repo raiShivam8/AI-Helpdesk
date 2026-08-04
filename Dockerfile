@@ -93,8 +93,12 @@ COPY --from=frontend /app/public/build ./public/build
 # Copy vendor packages from Stage 2
 COPY --from=composer /app/vendor ./vendor
 
+# Ensure config directories exist
+RUN mkdir -p /etc/nginx/http.d /etc/nginx/conf.d /etc/supervisor/conf.d
+
 # Copy Docker configurations (Nginx, Supervisor, Entrypoint)
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 

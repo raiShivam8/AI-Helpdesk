@@ -10,6 +10,10 @@ if [ -f /etc/nginx/http.d/default.conf ]; then
     sed -i "s/listen 80;/listen ${PORT};/g" /etc/nginx/http.d/default.conf
     sed -i "s/listen \[::\]:80;/listen \[::\]:${PORT};/g" /etc/nginx/http.d/default.conf
 fi
+if [ -f /etc/nginx/conf.d/default.conf ]; then
+    sed -i "s/listen 80;/listen ${PORT};/g" /etc/nginx/conf.d/default.conf
+    sed -i "s/listen \[::\]:80;/listen \[::\]:${PORT};/g" /etc/nginx/conf.d/default.conf
+fi
 
 # Ensure storage directories exist and have proper permissions
 mkdir -p /var/www/html/storage/framework/cache/data \

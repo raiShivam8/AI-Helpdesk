@@ -117,8 +117,8 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expose HTTP Port
-EXPOSE 80
+# Expose HTTP Ports
+EXPOSE 80 8080 3000
 
-# Define Container Entrypoint
-ENTRYPOINT ["docker-entrypoint.sh"]
+# Define Container Startup Command
+CMD ["sh", "-c", "mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache && chmod -R 775 storage bootstrap/cache 2>/dev/null || true && php artisan storage:link --force 2>/dev/null || true && php artisan config:clear || true && php artisan route:clear || true && php artisan view:clear || true && php artisan package:discover --ansi || true && (php -d max_execution_time=0 artisan queue:work --sleep=3 --tries=3 --timeout=120 --max-time=3600 &) && (php artisan schedule:work &) && (sleep 2 && php artisan migrate --force &) && echo '🌟 Server listening on 0.0.0.0:'${PORT:-8080} && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]

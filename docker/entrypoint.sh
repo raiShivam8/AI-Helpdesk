@@ -3,17 +3,14 @@ set -e
 
 echo "🚀 Starting AI Helpdesk Production Container..."
 
-# Dynamically bind Nginx to Railway $PORT environment variable if provided
 PORT="${PORT:-80}"
 echo "🌐 Configuring Nginx to listen on port ${PORT}..."
 
 if [ -f /etc/nginx/http.d/default.conf ]; then
-    sed -i "s/listen [0-9]*;/listen ${PORT};/g" /etc/nginx/http.d/default.conf
-    sed -i "s/listen \[::\]:[0-9]*;/listen \[::\]:${PORT};/g" /etc/nginx/http.d/default.conf
+    sed -i "s/listen 80;/listen 80;\n    listen ${PORT};/g" /etc/nginx/http.d/default.conf 2>/dev/null || true
 fi
 if [ -f /etc/nginx/conf.d/default.conf ]; then
-    sed -i "s/listen [0-9]*;/listen ${PORT};/g" /etc/nginx/conf.d/default.conf
-    sed -i "s/listen \[::\]:[0-9]*;/listen \[::\]:${PORT};/g" /etc/nginx/conf.d/default.conf
+    sed -i "s/listen 80;/listen 80;\n    listen ${PORT};/g" /etc/nginx/conf.d/default.conf 2>/dev/null || true
 fi
 
 # Ensure storage directories exist and have proper permissions
@@ -29,17 +26,17 @@ chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 # Create storage symlink if not existing
 php artisan storage:link --force 2>/dev/null || true
 
-# Discover packages and cache assets
-echo "⚡ Discovering packages and caching Laravel assets..."
+# Clear stale caches to prevent route/config serialization errors
+echo "⚡ Preparing Laravel environment..."
+php artisan config:clear || true
+php artisan route:clear || true
+php artisan view:clear || true
 php artisan package:discover --ansi || true
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
 
-# Run database migrations asynchronously in background so Nginx starts immediately (< 0.2s)
+# Run database migrations asynchronously in background so Nginx starts immediately (< 0.1s)
 if [ "$RUN_MIGRATIONS" != "false" ]; then
     echo "📦 Triggering background database migrations..."
-    (sleep 1 && php artisan migrate --force) &
+    (sleep 2 && php artisan migrate --force) &
 fi
 
 # Execute supervisor or passed command

@@ -26,9 +26,9 @@ COPY . .
 RUN composer dump-autoload --optimize --no-dev --ignore-platform-reqs
 
 # =========================================================
-# Stage 3: Production Runtime (PHP 8.4 FPM + Nginx + Supervisor)
+# Stage 3: Production Runtime (PHP 8.3 FPM + Nginx + Supervisor)
 # =========================================================
-FROM php:8.4-fpm-alpine AS production
+FROM php:8.3-fpm-alpine AS production
 
 # Install System Dependencies & PHP Extensions required for Laravel, PostgreSQL, IMAP, etc.
 RUN apk add --no-cache \
@@ -36,17 +36,25 @@ RUN apk add --no-cache \
     supervisor \
     curl \
     git \
+    libpng \
     libpng-dev \
+    libjpeg-turbo \
     libjpeg-turbo-dev \
+    freetype \
     freetype-dev \
+    libzip \
     libzip-dev \
+    postgresql-libs \
     postgresql-dev \
     imap-dev \
+    c-client \
     krb5-dev \
     openssl-dev \
+    icu-libs \
     icu-dev \
     oniguruma-dev \
-    linux-headers
+    linux-headers \
+    $PHPIZE_DEPS
 
 # Configure & Install PHP Extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \

@@ -16,3 +16,5 @@ phpunit.xml
 .phpunit.result.cache
 *.log
 docker-compose.yml
+.editorconfig
+.npmrc

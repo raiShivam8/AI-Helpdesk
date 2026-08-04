@@ -23,12 +23,12 @@ RUN composer install \
     --ignore-platform-reqs
 
 COPY . .
-RUN composer dump-autoload --optimize --no-dev
+RUN composer dump-autoload --optimize --no-dev --ignore-platform-reqs
 
 # =========================================================
-# Stage 3: Production Runtime (PHP 8.3 FPM + Nginx + Supervisor)
+# Stage 3: Production Runtime (PHP 8.4 FPM + Nginx + Supervisor)
 # =========================================================
-FROM php:8.3-fpm-alpine AS production
+FROM php:8.4-fpm-alpine AS production
 
 # Install System Dependencies & PHP Extensions required for Laravel, PostgreSQL, IMAP, etc.
 RUN apk add --no-cache \

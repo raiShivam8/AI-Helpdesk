@@ -2,8 +2,8 @@
     <x-slot name="header">
         <div class="flex items-center justify-between w-full">
             <div>
-                <h1 class="text-lg font-bold text-slate-900">Users</h1>
-                <p class="text-xs text-slate-500 mt-0.5">Manage agents and administrators</p>
+                <h1 class="text-lg font-bold text-slate-900 dark:text-white">Users</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage agents and administrators</p>
             </div>
             <button
                 x-data=""
@@ -96,12 +96,12 @@
                                         font-semibold">
                                         {{ strtoupper(substr($user->name, 0, 1)) }}
                                     </div>
-                                    <span class="font-semibold text-slate-900">{{ $user->name }}</span>
+                                    <span class="font-semibold text-slate-900 dark:text-slate-100">{{ $user->name }}</span>
                                 </div>
                             </td>
 
                             {{-- Email --}}
-                            <td class="text-slate-500">{{ $user->email }}</td>
+                            <td class="text-slate-500 dark:text-slate-400">{{ $user->email }}</td>
 
                             {{-- Role --}}
                             <td class="whitespace-nowrap">
@@ -115,7 +115,7 @@
                             </td>
 
                             {{-- Joined --}}
-                            <td class="text-slate-500 whitespace-nowrap text-xs font-medium">
+                            <td class="text-slate-500 dark:text-slate-400 whitespace-nowrap text-xs font-medium">
                                 {{ $user->created_at->format('M j, Y') }}
                             </td>
 
@@ -174,8 +174,8 @@
                         <tr>
                             <td colspan="5" class="py-16 text-center">
                                 <div class="flex flex-col items-center gap-3">
-                                    <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <div class="w-12 h-12 bg-slate-100 dark:bg-slate-700/60 rounded-xl flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                     </div>
@@ -196,8 +196,8 @@
 
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">Create New User</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Add a new agent or admin to the system</p>
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white">Create New User</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Add a new agent or admin to the system</p>
                     </div>
                     <button type="button" x-on:click="$dispatch('close')"
                         class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
@@ -241,7 +241,7 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-3 mt-6 pt-5 border-t border-slate-100">
+                <div class="flex justify-end gap-3 mt-6 pt-5 border-t border-slate-100 dark:border-slate-700">
                     <x-secondary-button x-on:click="$dispatch('close')">Cancel</x-secondary-button>
                     <x-primary-button>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -262,8 +262,8 @@
 
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">Edit User</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">Update user details and permissions</p>
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white">Edit User</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Update user details and permissions</p>
                     </div>
                     <button type="button" x-on:click="$dispatch('close')"
                         class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
@@ -305,7 +305,7 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-3 mt-6 pt-5 border-t border-slate-100">
+                <div class="flex justify-end gap-3 mt-6 pt-5 border-t border-slate-100 dark:border-slate-700">
                     <x-secondary-button x-on:click="$dispatch('close')">Cancel</x-secondary-button>
                     <x-primary-button>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -330,22 +330,22 @@
                         </svg>
                     </div>
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">Delete User?</h2>
-                        <p class="text-sm text-slate-500 mt-1">
+                        <h2 class="text-base font-bold text-slate-900 dark:text-white">Delete User?</h2>
+                        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
                             This will soft-delete the user and remove them from active lists. They can be recovered later if needed.
                         </p>
                     </div>
                 </div>
 
-                <div class="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 mb-6">
-                    <p class="text-sm text-slate-700">
+                <div class="rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 px-4 py-3 mb-6">
+                    <p class="text-sm text-slate-700 dark:text-slate-200">
                         <span class="font-semibold" x-text="deleteUser.name"></span>
                         &mdash;
-                        <span class="text-slate-500" x-text="deleteUser.email"></span>
+                        <span class="text-slate-500 dark:text-slate-400" x-text="deleteUser.email"></span>
                     </p>
                 </div>
 
-                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
                     <x-secondary-button x-on:click="$dispatch('close')">Cancel</x-secondary-button>
                     <x-danger-button>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

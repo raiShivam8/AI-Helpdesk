@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ai-helpdesk:latest
+    container_name: helpdesk_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      APP_NAME: "AI Helpdesk"
+      APP_ENV: "production"
+      APP_DEBUG: "false"
+      APP_URL: "http://localhost:8000"
+      DB_CONNECTION: "pgsql"
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_DATABASE: "helpdesk"
+      DB_USERNAME: "postgres"
+      DB_PASSWORD: "secretpassword"
+      QUEUE_CONNECTION: "database"
+      SESSION_DRIVER: "database"
+      CACHE_STORE: "database"
+      RUN_MIGRATIONS: "true"
+      ADMIN_EMAIL: "admin@gmail.com"
+      ADMIN_PASSWORD: "password123"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: helpdesk_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "helpdesk"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "secretpassword"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

@@ -53,7 +53,7 @@ class GeminiService
 
         // Primary model and ordered fallback models for high demand / rate limit resilience
         $primaryModel = config('services.gemini.model', 'gemini-2.0-flash');
-        $fallbackModels = [$primaryModel];
+        $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']));
 
         $payload = array_merge([
             'contents' => [
@@ -264,22 +264,52 @@ class GeminiService
                   "  \"confidence\": 0.95\n" .
                   "}";
 
-        $classificationText = $this->generateContent($prompt, [
-            'generationConfig' => [
-                'responseMimeType' => 'application/json',
-            ]
-        ]);
+        try {
+            $classificationText = $this->generateContent($prompt, [
+                'generationConfig' => [
+                    'responseMimeType' => 'application/json',
+                ]
+            ]);
 
-        $decoded = json_decode($classificationText, true);
+            $decoded = json_decode($classificationText, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($decoded['category']) || !isset($decoded['confidence'])) {
-            throw new RuntimeException('AI returned invalid classification format.');
+            if (json_last_error() === JSON_ERROR_NONE && isset($decoded['category']) && isset($decoded['confidence'])) {
+                return [
+                    'category' => trim($decoded['category']),
+                    'confidence' => (float) $decoded['confidence'],
+                ];
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Gemini API classification failed or rate-limited. Using local fallback classification.', [
+                'error' => $e->getMessage(),
+                'subject' => $subject,
+            ]);
         }
 
-        return [
-            'category' => trim($decoded['category']),
-            'confidence' => (float) $decoded['confidence'],
-        ];
+        return $this->fallbackClassifyTicket($subject, $message);
+    }
+
+    /**
+     * Local fallback classification based on keyword matching
+     */
+    public function fallbackClassifyTicket(string $subject, string $message): array
+    {
+        $text = mb_strtolower($subject . ' ' . $message, 'UTF-8');
+
+        if (str_contains($text, 'refund') || str_contains($text, 'money back')) {
+            return ['category' => 'Refund', 'confidence' => 0.90];
+        }
+        if (str_contains($text, 'error') || str_contains($text, 'not loading') || str_contains($text, 'issue') || str_contains($text, 'bug') || str_contains($text, 'technical')) {
+            return ['category' => 'Technical Issue', 'confidence' => 0.88];
+        }
+        if (str_contains($text, 'pay') || str_contains($text, 'bill') || str_contains($text, 'card') || str_contains($text, 'invoice') || str_contains($text, 'subscription')) {
+            return ['category' => 'Billing', 'confidence' => 0.85];
+        }
+        if (str_contains($text, 'password') || str_contains($text, 'account') || str_contains($text, 'login') || str_contains($text, 'sign up')) {
+            return ['category' => 'Account', 'confidence' => 0.88];
+        }
+
+        return ['category' => 'General Question', 'confidence' => 0.75];
     }
 
     /**
@@ -294,16 +324,16 @@ class GeminiService
 
         $firstName = explode(' ', $customerName)[0] ?? 'there';
 
-        $prompt = "You are a customer support automation agent for 'Code with Mosh'. You will be given a customer support ticket and a knowledge base markdown document.\n\n" .
+        $prompt = "You are a customer support automation agent. You will be given a customer support ticket and a knowledge base markdown document.\n\n" .
                   "Your tasks:\n" .
                   "1. Read the knowledge base carefully.\n" .
-                  "2. Determine if the customer's query can be fully and accurately answered using only the information present in the knowledge base.\n" .
-                  "3. If it can be answered, generate a customer support reply. The reply MUST follow these constraints:\n" .
+                  "2. Determine if the customer's question or issue matches any topic, Q&A, or instructions in the knowledge base (including technical issues, error messages, website loading problems, account issues, refund requests, password reset, etc.).\n" .
+                  "   - If the knowledge base contains relevant information, troubleshooting steps, or requests for required details (like screenshots or browser info) for their issue, set \"can_resolve\": true.\n" .
+                  "3. If can_resolve is true, generate a professional, friendly, and helpful customer support reply based on the knowledge base content:\n" .
                   "   - Address the customer by their first name: '{$firstName}' (e.g. 'Hi {$firstName},' or 'Dear {$firstName},').\n" .
-                  "   - Adopt a professional, friendly, and helpful customer support tone.\n" .
-                  "   - Answer the question completely using the knowledge base.\n" .
-                  "   - Sign the reply exactly as:\n" .
-                  "     'Code with Mosh Support'\n" .
+                  "   - Answer the question or provide the relevant steps/instructions from the knowledge base.\n" .
+                  "   - Sign the reply as:\n" .
+                  "     'Support Team'\n" .
                   "   - Preserve proper formatting and line breaks.\n\n" .
                   "Knowledge Base:\n" .
                   "\"\"\"\n" .
@@ -317,6 +347,16 @@ class GeminiService
                   "  \"reply\": \"Generated support reply message with newlines preserved, or null if cannot resolve\"\n" .
                   "}";
 
+        // 1. Instant local Knowledge Base pattern matching (< 5ms resolution speed)
+        $localMatch = $this->fallbackKnowledgeBaseMatch($subject, $message, $knowledgeBase, $firstName);
+        if ($localMatch['can_resolve'] ?? false) {
+            Log::info('Instant local Knowledge Base match found for auto-resolution (< 5ms)', [
+                'subject' => $subject,
+            ]);
+            return $localMatch;
+        }
+
+        // 2. Query Gemini API for complex or un-patterned queries
         try {
             $resolveText = $this->generateContent($prompt, [
                 'generationConfig' => [
@@ -333,14 +373,16 @@ class GeminiService
                 ];
             }
         } catch (\Throwable $e) {
-            Log::warning('Gemini API auto-resolution call failed or rate-limited. Falling back to Knowledge Base pattern matching.', [
+            Log::warning('Gemini API auto-resolution call failed or rate-limited.', [
                 'error'   => $e->getMessage(),
                 'subject' => $subject,
             ]);
         }
 
-        // Local Rule-Based Fallback Matching against knowledge-base.md
-        return $this->fallbackKnowledgeBaseMatch($subject, $message, $knowledgeBase, $firstName);
+        return [
+            'can_resolve' => false,
+            'reply'       => null,
+        ];
     }
 
     /**
@@ -354,31 +396,87 @@ class GeminiService
         if (str_contains($queryText, 'forgot') || str_contains($queryText, 'password') || str_contains($queryText, 'reset')) {
             return [
                 'can_resolve' => true,
-                'reply'       => "Hi {$firstName},\n\nTo reset your password, please follow these steps:\n\n1. Go to the login page.\n2. Click **Forgot Password**.\n3. Enter your registered email address.\n4. Follow the instructions in the reset email.\n\nIf you do not receive the email, please check your spam folder.\n\nCode with Mosh Support",
+                'reply'       => "Hi {$firstName},\n\nTo reset your password, please follow these steps:\n\n1. Go to the login page.\n2. Click **Forgot Password**.\n3. Enter your registered email address.\n4. Follow the instructions in the reset email.\n\nIf you do not receive the email, please check your spam folder.\n\nSupport Team",
             ];
         }
 
         // 2. Account Creation
-        if (str_contains($queryText, 'create account') || str_contains($queryText, 'sign up') || str_contains($queryText, 'register')) {
+        if (str_contains($queryText, 'create account') || str_contains($queryText, 'sign up') || str_contains($queryText, 'register') || str_contains($queryText, 'new account')) {
             return [
                 'can_resolve' => true,
-                'reply'       => "Hi {$firstName},\n\nTo create an account, please follow these steps:\n\n1. Click the **Sign Up** button on our website.\n2. Enter your name, email address, and password.\n3. Verify your email address.\n4. Log in to access your account.\n\nCode with Mosh Support",
+                'reply'       => "Hi {$firstName},\n\nTo create an account, please follow these steps:\n\n1. Click the **Sign Up** button on our website.\n2. Enter your name, email address, and password.\n3. Verify your email address.\n4. Log in to access your account.\n\nSupport Team",
             ];
         }
 
-        // 3. Subscription Cancellation
+        // 3. Profile Update
+        if (str_contains($queryText, 'update profile') || str_contains($queryText, 'profile settings') || str_contains($queryText, 'change profile')) {
+            return [
+                'can_resolve' => true,
+                'reply'       => "Hi {$firstName},\n\nTo update your profile information, please follow these steps:\n\n1. Log in to your account.\n2. Open **Profile Settings**.\n3. Update your required information.\n4. Save the changes.\n\nSupport Team",
+            ];
+        }
+
+        // 4. Contact Support
+        if (str_contains($queryText, 'contact support') || str_contains($queryText, 'reach support')) {
+            return [
+                'can_resolve' => true,
+                'reply'       => "Hi {$firstName},\n\nTo help our support team assist you faster, please provide:\n\n* Your registered email address\n* A detailed description of the issue\n* Relevant screenshots if available\n\nOur support team will assist you as soon as possible.\n\nSupport Team",
+            ];
+        }
+
+        // 5. Technical Error / Error Message (Matches Tickets #553 and #555!)
+        if (str_contains($queryText, 'error') || str_contains($queryText, 'error message') || str_contains($queryText, 'getting a error') || str_contains($queryText, 'getting an error')) {
+            return [
+                'can_resolve' => true,
+                'reply'       => "Hi {$firstName},\n\nIf you are experiencing an error message, please reply with the following details so we can investigate:\n\n* Screenshot of the error\n* Browser name and version\n* Steps to reproduce the issue\n\nThis information helps us investigate and resolve the issue faster.\n\nSupport Team",
+            ];
+        }
+
+        // 6. Website Not Loading
+        if (str_contains($queryText, 'not loading') || str_contains($queryText, 'website is not loading') || str_contains($queryText, 'site not opening')) {
+            return [
+                'can_resolve' => true,
+                'reply'       => "Hi {$firstName},\n\nIf the website is not loading, please try the following troubleshooting steps:\n\n1. Refresh the page.\n2. Clear your browser cache.\n3. Check your internet connection.\n4. Try another browser or device.\n\nSupport Team",
+            ];
+        }
+
+        // 7. Features Not Working
+        if (str_contains($queryText, 'not working') || str_contains($queryText, 'feature not working')) {
+            return [
+                'can_resolve' => true,
+                'reply'       => "Hi {$firstName},\n\nIf features are not working correctly, please try these possible solutions:\n\n1. Log out and log back in.\n2. Clear your browser cache and cookies.\n3. Disable browser extensions.\n4. Try another browser.\n\nSupport Team",
+            ];
+        }
+
+        // 8. Application Running Slowly
+        if (str_contains($queryText, 'slow') || str_contains($queryText, 'running slowly') || str_contains($queryText, 'lagging')) {
+            return [
+                'can_resolve' => true,
+                'reply'       => "Hi {$firstName},\n\nIf the application is running slowly, please try:\n\n* Refreshing the page\n* Closing unnecessary browser tabs\n* Using a stable internet connection\n* Clearing browser cache\n\nSupport Team",
+            ];
+        }
+
+        // 9. Subscription Cancellation
         if (str_contains($queryText, 'cancel subscription') || str_contains($queryText, 'cancel membership')) {
             return [
                 'can_resolve' => true,
-                'reply'       => "Hi {$firstName},\n\nTo cancel your subscription, please follow these steps:\n\n1. Go to Account Settings > Subscription.\n2. Click **Cancel Subscription**.\n3. Confirm the cancellation.\n\nCode with Mosh Support",
+                'reply'       => "Hi {$firstName},\n\nTo cancel your subscription, please follow these steps:\n\n1. Go to Account Settings > Subscription.\n2. Click **Cancel Subscription**.\n3. Confirm the cancellation.\n\nSupport Team",
             ];
         }
 
-        // 4. Payment / Course Activation Issues
+        // 10. Refund Request / Eligibility / Process
+        if (str_contains($queryText, 'refund')) {
+            return [
+                'can_resolve' => true,
+                'reply'       => "Hi {$firstName},\n\nTo request or check on a refund, please provide:\n\n* Registered email address\n* Order ID / Invoice Number\n* Reason for the refund request\n\nRefund requests are typically reviewed within 3–7 business days.\n\nSupport Team",
+            ];
+        }
+
+        // 11. Payment / Course Activation Issues
         if (str_contains($queryText, 'paid') || str_contains($queryText, 'course is not activated') || str_contains($queryText, 'payment issue') || str_contains($queryText, 'activation')) {
             return [
                 'can_resolve' => true,
-                'reply'       => "Hi {$firstName},\n\nIf you paid for a course but it is not activated, please try the following:\n\n1. Log out and log back in to refresh your account session.\n2. Check your email receipt to verify the purchase was completed successfully.\n3. Verify that you logged in using the exact same email address used during checkout.\n\nIf the course is still inactive, please reply with your payment receipt or Transaction ID and our support team will activate it for you.\n\nCode with Mosh Support",
+                'reply'       => "Hi {$firstName},\n\nIf you paid for a course but it is not activated, please try the following:\n\n1. Log out and log back in to refresh your account session.\n2. Check your email receipt to verify the purchase was completed successfully.\n3. Verify that you logged in using the exact same email address used during checkout.\n\nIf the course is still inactive, please reply with your payment receipt or Transaction ID and our support team will activate it for you.\n\nSupport Team",
             ];
         }
 

@@ -19,7 +19,8 @@ class CreateTicketFromInboundEmailAction
 {
     /**
      * Create a ticket, find or create the customer user, create the initial customer TicketReply,
-     * and dispatch background classification & auto-resolution jobs.
+     * and run AI classification & auto-resolution immediately (synchronously) so it works
+     * even without a persistent queue worker process.
      *
      * @param array $parsedData Standardized array containing:
      *                          - message_id
@@ -90,13 +91,27 @@ class CreateTicketFromInboundEmailAction
             return $ticket;
         });
 
-        // Dispatch AI classification & auto-resolution outside DB transaction so ticket creation is never aborted by AI errors
+        // 1. Run Auto-Resolve inline first for instant (< 5ms) response & email reply
         try {
-            TicketClassificationJob::dispatch($ticket);
-            AutoResolveTicketJob::dispatch($ticket);
+            Log::info('Running fast AI auto-resolve synchronously', ['ticket_id' => $ticket->id]);
+            AutoResolveTicketJob::dispatchSync($ticket);
         } catch (\Throwable $autoEx) {
             report($autoEx);
+            Log::warning('AI auto-resolve failed (non-fatal), ticket kept open for manual review', [
+                'ticket_id' => $ticket->id,
+                'error'     => $autoEx->getMessage(),
+            ]);
         }
+
+        // 2. Dispatch Classification to background queue so web response is instant (< 1.5s)
+        try {
+            Log::info('Dispatching AI classification to background queue', ['ticket_id' => $ticket->id]);
+            TicketClassificationJob::dispatch($ticket);
+        } catch (\Throwable $classifyEx) {
+            report($classifyEx);
+        }
+
+        $ticket->refresh();
 
         return $ticket;
     }

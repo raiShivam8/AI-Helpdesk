@@ -21,7 +21,7 @@
         <div class="flex items-center gap-3 w-full min-w-0">
             {{-- Back button --}}
             <a href="{{ route('tickets.index') }}"
-               class="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition-all duration-150 shrink-0"
+               class="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all duration-150 shrink-0"
                title="Back to Tickets">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -30,11 +30,11 @@
 
             {{-- Subject + meta --}}
             <div class="min-w-0">
-                <h1 class="text-[15px] font-bold text-slate-900 leading-tight truncate" title="{{ $ticket->subject }}">
+                <h1 class="text-[15px] font-bold text-slate-900 dark:text-white leading-tight truncate" title="{{ $ticket->subject }}">
                     {{ $ticket->subject }}
                 </h1>
-                <p class="text-xs text-slate-500 mt-0.5">
-                    <span class="font-semibold text-slate-700">Ticket #{{ $ticket->id }}</span>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    <span class="font-semibold text-slate-700 dark:text-slate-300">Ticket #{{ $ticket->id }}</span>
                     &middot;
                     Opened {{ $ticket->created_at->diffForHumans() }}
                     &middot;
@@ -58,7 +58,7 @@
                         </button>
                     </form>
                 @elseif($ticket->ai_resolved_at !== null)
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-purple-50 text-purple-700 ring-1 ring-purple-200">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-1 ring-purple-200 dark:ring-purple-700/50">
                         <svg class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
@@ -172,7 +172,7 @@
                         {{ strtoupper(substr($ticket->sender_name, 0, 1)) }}
                     </div>
                     <div>
-                        <p class="font-semibold text-slate-900 text-base leading-tight">{{ $ticket->sender_name }}</p>
+                        <p class="font-semibold text-slate-900 dark:text-white text-base leading-tight">{{ $ticket->sender_name }}</p>
                         <a href="mailto:{{ $ticket->sender_email }}" class="text-sm text-indigo-600 hover:underline mt-0.5 block">
                             {{ $ticket->sender_email }}
                         </a>
@@ -188,14 +188,14 @@
             </div>
 
             {{-- ── AI Summary Card ── --}}
-            <div x-show="summary || isSummarizing || summaryError" x-cloak class="card p-5 border border-indigo-100 bg-gradient-to-r from-indigo-50/30 to-purple-50/30 shadow-sm animate-in space-y-4">
-                <div class="flex items-center justify-between border-b border-indigo-100 pb-3">
+            <div x-show="summary || isSummarizing || summaryError" x-cloak class="card p-5 border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-r from-indigo-50/30 dark:from-indigo-900/20 to-purple-50/30 dark:to-purple-900/20 shadow-sm animate-in space-y-4">
+                <div class="flex items-center justify-between border-b border-indigo-100 dark:border-indigo-900/50 pb-3">
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 text-indigo-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l-1.813-5.096L2.091 14.09 7.187 13.28 9 8.187l1.813 5.096 5.096 1.813-5.096 1.813z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4m-2-2h4" />
                         </svg>
-                        <h3 class="text-sm font-bold text-indigo-900 tracking-wide uppercase">AI-Powered Ticket Summary</h3>
+                        <h3 class="text-sm font-bold text-indigo-900 dark:text-indigo-300 tracking-wide uppercase">AI-Powered Ticket Summary</h3>
                     </div>
                     <button type="button" @click="summary = null; summaryError = null" class="text-slate-400 hover:text-slate-600 font-bold text-lg leading-none" title="Dismiss Summary">&times;</button>
                 </div>
@@ -206,7 +206,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p class="text-xs text-slate-500 font-medium">Gemini is analyzing the conversation thread...</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Gemini is analyzing the conversation thread...</p>
                 </div>
 
                 {{-- Error Banner --}}
@@ -221,37 +221,37 @@
                 </div>
 
                 {{-- Summary Sections --}}
-                <div x-show="summary && !isSummarizing" class="space-y-4 text-sm text-slate-800 animate-in">
+                <div x-show="summary && !isSummarizing" class="space-y-4 text-sm text-slate-800 dark:text-slate-200 animate-in">
                     {{-- Summary Paragraph --}}
-                    <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
-                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Concise Summary</p>
-                        <p class="text-slate-700 leading-relaxed text-[13px]" x-text="summary.summary"></p>
+                    <div class="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Concise Summary</p>
+                        <p class="text-slate-700 dark:text-slate-300 leading-relaxed text-[13px]" x-text="summary.summary"></p>
                     </div>
 
                     {{-- Customer Issues and Actions Taken side-by-side --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                        <div class="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-4 shadow-sm">
                             <p class="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                 </svg>
                                 Important Issues
                             </p>
-                            <ul class="list-disc pl-4 space-y-1 text-xs text-slate-600">
+                            <ul class="list-disc pl-4 space-y-1 text-xs text-slate-600 dark:text-slate-400">
                                 <template x-for="issue in summary.issues">
                                     <li x-text="issue"></li>
                                 </template>
                             </ul>
                         </div>
 
-                        <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                        <div class="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-4 shadow-sm">
                             <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                                 </svg>
                                 Actions Taken
                             </p>
-                            <ul class="list-disc pl-4 space-y-1 text-xs text-slate-600">
+                            <ul class="list-disc pl-4 space-y-1 text-xs text-slate-600 dark:text-slate-400">
                                 <template x-for="action in summary.actions_taken">
                                     <li x-text="action"></li>
                                 </template>
@@ -261,24 +261,24 @@
 
                     {{-- Current Status and Suggested Next Step side-by-side --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
+                        <div class="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-4 shadow-sm">
                             <p class="text-xs font-semibold text-emerald-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 Current Status
                             </p>
-                            <p class="text-xs text-slate-600 leading-relaxed" x-text="summary.status"></p>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed" x-text="summary.status"></p>
                         </div>
 
-                        <div class="bg-white border border-slate-100 rounded-xl p-4 shadow-sm bg-gradient-to-br from-purple-50/50 to-indigo-50/50">
-                            <p class="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <div class="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-4 shadow-sm bg-gradient-to-br from-purple-50/50 dark:from-purple-900/20 to-indigo-50/50 dark:to-indigo-900/20">
+                            <p class="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                                 </svg>
                                 Suggested Next Step
                             </p>
-                            <p class="text-xs font-bold text-purple-800 leading-relaxed" x-text="summary.next_step"></p>
+                            <p class="text-xs font-bold text-purple-800 dark:text-purple-300 leading-relaxed" x-text="summary.next_step"></p>
                         </div>
                     </div>
                 </div>
@@ -291,8 +291,8 @@
                     Original Message · Customer
                 </p>
 
-                <div class="w-full bg-amber-50 border border-amber-200 rounded-2xl rounded-tr-sm p-5 shadow-sm">
-                    <div class="text-slate-800 leading-relaxed whitespace-pre-wrap text-[15px]">
+                <div class="w-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl rounded-tr-sm p-5 shadow-sm">
+                    <div class="text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap text-[15px]">
                         {{ $ticket->body }}
                     </div>
                     <p class="text-xs text-amber-400 mt-4 pt-3 border-t border-amber-100 text-right">
@@ -316,7 +316,7 @@
                         Conversation ({{ $ticket->replies->count() }}
                         {{ Str::plural('reply', $ticket->replies->count()) }})
                     </p>
-                    <div class="flex-1 h-px bg-slate-200"></div>
+                    <div class="flex-1 h-px bg-slate-200 dark:bg-slate-700"></div>
                 </div>
 
                 @foreach($ticket->replies as $reply)
@@ -331,7 +331,7 @@
                             <div class="avatar avatar-sm bg-indigo-100 text-indigo-700 font-semibold shrink-0">
                                 {{ $reply->user ? strtoupper(substr($reply->user->name, 0, 1)) : 'AI' }}
                             </div>
-                            <span class="text-xs font-semibold text-slate-700">
+                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">
                                 {{ $reply->user?->name ?? 'AI Assistant' }}
                             </span>
                             @if($reply->user)
@@ -351,8 +351,8 @@
                         </div>
 
                         {{-- Agent bubble: left-aligned, indigo tint --}}
-                        <div class="max-w-[90%] bg-indigo-50 border border-indigo-200 rounded-2xl rounded-tl-sm p-4 shadow-sm">
-                            <div class="text-slate-800 leading-relaxed whitespace-pre-wrap text-sm">
+                        <div class="max-w-[90%] bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800/50 rounded-2xl rounded-tl-sm p-4 shadow-sm">
+                            <div class="text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap text-sm">
                                 @if($reply->body_html)
                                     {!! $reply->body_html !!}
                                 @else
@@ -374,7 +374,7 @@
                                 datetime="{{ $reply->created_at->toIso8601String() }}"
                                 title="{{ $reply->created_at->format('Y-m-d H:i:s') }}"
                             >{{ $reply->created_at->diffForHumans() }} ·</time>
-                            <span class="text-xs font-semibold text-slate-700">
+                            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">
                                 {{ $ticket->sender_name }}
                             </span>
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">
@@ -386,8 +386,8 @@
                         </div>
 
                         {{-- Customer bubble: right-aligned, amber tint --}}
-                        <div class="max-w-[90%] bg-amber-50 border border-amber-200 rounded-2xl rounded-tr-sm p-4 shadow-sm">
-                            <div class="text-slate-800 leading-relaxed whitespace-pre-wrap text-sm">
+                        <div class="max-w-[90%] bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl rounded-tr-sm p-4 shadow-sm">
+                            <div class="text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap text-sm">
                                 @if($reply->body_html)
                                     {!! $reply->body_html !!}
                                 @else
@@ -406,7 +406,7 @@
             <div class="flex justify-end mt-4 mb-2">
                 <button
                     type="button"
-                    class="inline-flex items-center gap-1.5 px-4.5 py-2 text-sm font-semibold rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-sm"
+                    class="inline-flex items-center gap-1.5 px-4.5 py-2 text-sm font-semibold rounded-lg border border-indigo-200 dark:border-indigo-700/60 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-sm"
                     :disabled="isSummarizing"
                     @click="generateSummary(false)"
                 >
@@ -435,9 +435,9 @@
                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                     </div>
                     <div>
-                        <p class="text-sm font-semibold text-slate-900">{{ auth()->user()->name }}</p>
+                        <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ auth()->user()->name }}</p>
                         <div class="flex items-center gap-1.5 mt-0.5">
-                            <p class="text-xs text-slate-500">Replying as</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Replying as</p>
                             @if(auth()->user()->isAdmin())
                                 <span class="badge badge-admin">Admin</span>
                             @else
@@ -518,7 +518,7 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="reply-body" class="block text-xs font-semibold text-slate-600 mb-1.5">
+                        <label for="reply-body" class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
                             Reply Message <span class="text-red-500">*</span>
                         </label>
 
@@ -530,8 +530,8 @@
                             x-model="body"
                             @input="charCount = body.length"
                             placeholder="Type your reply to the customer…"
-                            class="w-full rounded-lg border text-sm text-slate-900 leading-relaxed transition duration-150 resize-y
-                                   {{ $errors->has('body') ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/30' : 'border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' }}"
+                            class="w-full rounded-lg border text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800/60 placeholder-slate-400 dark:placeholder-slate-500 leading-relaxed transition duration-150 resize-y
+                                   {{ $errors->has('body') ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/30' : 'border-slate-300 dark:border-slate-600 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30' }}"
                         >{{ old('body') }}</textarea>
 
                         {{-- Validation error --}}
@@ -550,7 +550,7 @@
                         </p>
                     </div>
 
-                    <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700">
                         <p class="text-xs text-slate-400 flex items-center gap-1">
                             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -562,7 +562,7 @@
                             {{-- Polish Reply Button --}}
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1.5 px-4.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
+                                class="inline-flex items-center gap-1.5 px-4.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-800 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
                                 :disabled="body.trim().length === 0 || isPolishing"
                                 @click="polish()"
                             >
@@ -693,7 +693,7 @@
                             <div class="avatar avatar-sm gradient-brand text-white">
                                 {{ strtoupper(substr($ticket->assignedAgent->name, 0, 1)) }}
                             </div>
-                            <span class="font-medium text-slate-700 text-sm">{{ $ticket->assignedAgent->name }}</span>
+                            <span class="font-medium text-slate-700 dark:text-slate-300 text-sm">{{ $ticket->assignedAgent->name }}</span>
                         </div>
                     @else
                         <span class="text-sm text-slate-400 italic">Not yet assigned</span>
@@ -712,22 +712,22 @@
                         $customerReplies = $ticket->replies->filter(fn($r) => $r->sender_type === \App\Enums\SenderType::Customer)->count();
                     @endphp
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2 text-sm text-slate-600">
+                        <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                             <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block shrink-0"></span>
                             Agent replies
                         </div>
-                        <span class="text-sm font-bold text-slate-900">{{ $agentReplies }}</span>
+                        <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $agentReplies }}</span>
                     </div>
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2 text-sm text-slate-600">
+                        <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                             <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block shrink-0"></span>
                             Customer replies
                         </div>
-                        <span class="text-sm font-bold text-slate-900">{{ $customerReplies }}</span>
+                        <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $customerReplies }}</span>
                     </div>
-                    <div class="border-t border-slate-100 pt-3 flex items-center justify-between">
-                        <span class="text-sm text-slate-500">Total exchanges</span>
-                        <span class="text-sm font-bold text-slate-900">{{ $ticket->replies->count() }}</span>
+                    <div class="border-t border-slate-100 dark:border-slate-700 pt-3 flex items-center justify-between">
+                        <span class="text-sm text-slate-500 dark:text-slate-400">Total exchanges</span>
+                        <span class="text-sm font-bold text-slate-900 dark:text-white">{{ $ticket->replies->count() }}</span>
                     </div>
                 </div>
             </div>
@@ -745,15 +745,15 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</p>
-                            <p class="text-sm text-slate-700 font-medium mt-0.5" title="{{ $ticket->created_at->format('Y-m-d H:i:s') }}">
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Created</p>
+                            <p class="text-sm text-slate-700 dark:text-slate-200 font-medium mt-0.5" title="{{ $ticket->created_at->format('Y-m-d H:i:s') }}">
                                 {{ $ticket->created_at->format('M j, Y · g:i a') }}
                             </p>
                             <p class="text-xs text-slate-400 mt-0.5">{{ $ticket->created_at->diffForHumans() }}</p>
                         </div>
                     </div>
 
-                    <div class="w-px h-4 bg-slate-200 ml-4"></div>
+                    <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 ml-4"></div>
 
                     {{-- Last Updated --}}
                     <div class="flex items-start gap-3">
@@ -763,8 +763,8 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Updated</p>
-                            <p class="text-sm text-slate-700 font-medium mt-0.5" title="{{ $ticket->updated_at->format('Y-m-d H:i:s') }}">
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Last Updated</p>
+                            <p class="text-sm text-slate-700 dark:text-slate-200 font-medium mt-0.5" title="{{ $ticket->updated_at->format('Y-m-d H:i:s') }}">
                                 {{ $ticket->updated_at->format('M j, Y · g:i a') }}
                             </p>
                             <p class="text-xs text-slate-400 mt-0.5">{{ $ticket->updated_at->diffForHumans() }}</p>
@@ -772,7 +772,7 @@
                     </div>
 
                     @if($ticket->replies->isNotEmpty())
-                    <div class="w-px h-4 bg-slate-200 ml-4"></div>
+                    <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 ml-4"></div>
 
                     {{-- Last Reply --}}
                     @php $lastReply = $ticket->replies->last(); @endphp
@@ -783,13 +783,13 @@
                             </svg>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                 Last Reply
                                 <span class="ml-1 font-semibold {{ $lastReply->sender_type === \App\Enums\SenderType::Agent ? 'text-indigo-500' : 'text-amber-500' }}">
                                     · {{ $lastReply->sender_type->label() }}
                                 </span>
                             </p>
-                            <p class="text-sm text-slate-700 font-medium mt-0.5">
+                            <p class="text-sm text-slate-700 dark:text-slate-200 font-medium mt-0.5">
                                 @if($lastReply->sender_type === \App\Enums\SenderType::Agent)
                                     {{ $lastReply->user?->name ?? 'Deleted User' }}
                                 @else

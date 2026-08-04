@@ -128,7 +128,7 @@ return [
     | Default Admin User Credentials
     |--------------------------------------------------------------------------
     */
-    'admin_email' => env('ADMIN_EMAIL', 'shivam@gmail.com'),
+    'admin_email' => env('ADMIN_EMAIL', 'admin@gmail.com'),
     'admin_password' => env('ADMIN_PASSWORD', 'password123'),
 
 ];

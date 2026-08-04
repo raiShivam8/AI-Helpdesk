@@ -2,8 +2,8 @@
     <x-slot name="header">
         <div class="flex items-center justify-between w-full">
             <div>
-                <h1 class="text-lg font-bold text-slate-900">Tickets</h1>
-                <p class="text-xs text-slate-500 mt-0.5">Support queue — all incoming requests</p>
+                <h1 class="text-lg font-bold text-slate-900 dark:text-white">Tickets</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Support queue — all incoming requests</p>
             </div>
             <div class="flex items-center gap-2">
                 <form action="{{ route('tickets.sync-emails') }}" method="POST">
@@ -46,7 +46,7 @@
                     value="{{ $search ?? '' }}"
                     placeholder="Search by subject, sender, email or message…"
                     autocomplete="off"
-                    class="w-full rounded-lg border border-slate-300 bg-white pl-10 pr-10 py-2.5 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none"
+                    class="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 pl-10 pr-10 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-sm transition duration-150 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none"
                 >
                 {{-- Clear search X button --}}
                 <button
@@ -68,7 +68,7 @@
             <div class="flex flex-wrap items-end gap-3">
                 {{-- Status --}}
                 <div class="flex-1 min-w-[160px]">
-                    <label for="status" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                    <label for="status" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Status</label>
                     <select name="status" id="status" @change="$refs.filterForm.submit()" class="form-select">
                         <option value="">All Statuses</option>
                         @foreach(\App\Enums\TicketStatus::cases() as $st)
@@ -81,7 +81,7 @@
 
                 {{-- Category --}}
                 <div class="flex-1 min-w-[160px]">
-                    <label for="category" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Category</label>
+                    <label for="category" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
                     <select name="category" id="category" @change="$refs.filterForm.submit()" class="form-select">
                         <option value="">All Categories</option>
                         @foreach(\App\Enums\TicketCategory::cases() as $cat)
@@ -94,7 +94,7 @@
 
                 {{-- Agent --}}
                 <div class="flex-1 min-w-[160px]">
-                    <label for="agent" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Assigned Agent</label>
+                    <label for="agent" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Assigned Agent</label>
                     <select name="agent" id="agent" @change="$refs.filterForm.submit()" class="form-select">
                         <option value="">All Agents</option>
                         <option value="unassigned" {{ $agent === 'unassigned' ? 'selected' : '' }}>Unassigned</option>
@@ -126,8 +126,8 @@
             </div>
 
             @if($hasActiveFilters)
-            <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-                <span class="text-xs text-slate-500 font-medium">Active filters:</span>
+            <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Active filters:</span>
                 @if(!empty($search))
                     <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full ring-1 ring-emerald-200">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -162,17 +162,17 @@
         @if($hasActiveFilters)
             {{-- Filtered / Search Empty State --}}
             <div class="card flex flex-col items-center justify-center py-20 px-6 text-center">
-                <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mb-5">
+                <div class="w-16 h-16 bg-slate-100 dark:bg-slate-700/60 rounded-2xl flex items-center justify-center text-slate-400 dark:text-slate-500 mb-5">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
                 @if(!empty($search))
-                    <h3 class="text-base font-bold text-slate-900 mb-1.5">No tickets found for &ldquo;{{ $search }}&rdquo;</h3>
-                    <p class="text-sm text-slate-500 max-w-sm mb-6">Try different keywords, or clear your search to browse all tickets.</p>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">No tickets found for &ldquo;{{ $search }}&rdquo;</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">Try different keywords, or clear your search to browse all tickets.</p>
                 @else
-                    <h3 class="text-base font-bold text-slate-900 mb-1.5">No tickets match your filters</h3>
-                    <p class="text-sm text-slate-500 max-w-sm mb-6">Try adjusting or clearing the active filters to see more results.</p>
+                    <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">No tickets match your filters</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">Try adjusting or clearing the active filters to see more results.</p>
                 @endif
                 <a href="{{ route('tickets.index', ['sort' => $sort, 'direction' => $direction]) }}" class="btn-secondary">
                     Clear All Filters
@@ -181,13 +181,13 @@
         @else
             {{-- Global Empty State --}}
             <div class="card flex flex-col items-center justify-center py-24 px-6 text-center">
-                <div class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 mb-5">
+                <div class="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-500 dark:text-indigo-400 mb-5">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
                 </div>
-                <h3 class="text-base font-bold text-slate-900 mb-1.5">Queue is empty</h3>
-                <p class="text-sm text-slate-500 max-w-sm">All caught up! No tickets in the queue. Incoming support emails will automatically appear here as new tickets.</p>
+                <h3 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">Queue is empty</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm">All caught up! No tickets in the queue. Incoming support emails will automatically appear here as new tickets.</p>
             </div>
         @endif
     @else
@@ -216,7 +216,7 @@
                             {{-- Subject --}}
                             <td class="max-w-[280px]">
                                 <a href="{{ route('tickets.show', $ticket) }}"
-                                   class="block font-semibold text-slate-900 hover:text-indigo-600 truncate transition-colors duration-150"
+                                   class="block font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 truncate transition-colors duration-150"
                                    title="{{ $ticket->subject }}">
                                     {{ $ticket->subject }}
                                 </a>
@@ -228,12 +228,12 @@
                             {{-- Sender --}}
                             <td class="whitespace-nowrap">
                                 <div class="flex items-center gap-2.5">
-                                    <div class="avatar avatar-sm bg-slate-100 text-slate-600">
+                                    <div class="avatar avatar-sm bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                                         {{ strtoupper(substr($ticket->sender_name, 0, 1)) }}
                                     </div>
                                     <div>
-                                        <p class="text-sm font-medium text-slate-800">{{ $ticket->sender_name }}</p>
-                                        <p class="text-xs text-slate-400">{{ $ticket->sender_email }}</p>
+                                        <p class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ $ticket->sender_name }}</p>
+                                        <p class="text-xs text-slate-400 dark:text-slate-500">{{ $ticket->sender_email }}</p>
                                     </div>
                                 </div>
                             </td>
@@ -280,7 +280,7 @@
                                         <div class="avatar avatar-sm gradient-brand text-white">
                                             {{ strtoupper(substr($ticket->assignedAgent->name, 0, 1)) }}
                                         </div>
-                                        <span class="text-sm font-medium text-slate-700">{{ $ticket->assignedAgent->name }}</span>
+                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ $ticket->assignedAgent->name }}</span>
                                     </div>
                                 @else
                                     <span class="inline-flex items-center gap-1.5 text-xs text-slate-400 italic">
@@ -306,7 +306,7 @@
 
             {{-- Pagination --}}
             @if($tickets->hasPages())
-            <div class="px-5 py-4 border-t border-slate-100 bg-white">
+            <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-transparent">
                 {{ $tickets->links() }}
             </div>
             @endif

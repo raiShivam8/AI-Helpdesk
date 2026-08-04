@@ -11,7 +11,7 @@ RUN npm run build
 # =========================================================
 # Stage 2: Install PHP Composer Dependencies
 # =========================================================
-FROM composer:2.7 AS composer
+FROM composer:latest AS composer
 WORKDIR /app
 COPY composer*.json ./
 RUN composer install \
@@ -23,7 +23,7 @@ RUN composer install \
     --ignore-platform-reqs
 
 COPY . .
-RUN composer dump-autoload --optimize --no-dev --ignore-platform-reqs
+RUN composer dump-autoload --optimize --no-dev --no-scripts --ignore-platform-reqs
 
 # =========================================================
 # Stage 3: Production Runtime (PHP 8.3 FPM + Nginx + Supervisor)

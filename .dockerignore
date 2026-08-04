@@ -15,6 +15,4 @@ tests
 phpunit.xml
 .phpunit.result.cache
 *.log
-Dockerfile
-docker
 docker-compose.yml

@@ -9,11 +9,12 @@ services:
     container_name: helpdesk_app
     restart: unless-stopped
     ports:
-      - "8000:80"
+      - "8000:8080"
     environment:
       APP_NAME: "AI Helpdesk"
       APP_ENV: "production"
       APP_DEBUG: "false"
+      APP_KEY: "base64:ZGcxVn6r1a1t3hsc6G49y4WNgEbgRB2MfWflF15ocxU="
       APP_URL: "http://localhost:8000"
       DB_CONNECTION: "pgsql"
       DB_HOST: "postgres"

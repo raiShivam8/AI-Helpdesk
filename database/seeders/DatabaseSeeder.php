@@ -57,6 +57,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AiAgentSeeder::class,
             TicketSeeder::class,
+            Ticket110RepliesSeeder::class,
         ]);
     }
 }

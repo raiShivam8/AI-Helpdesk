@@ -151,24 +151,24 @@ class TicketFactory extends Factory
             ]
         ];
 
-        $category = $this->faker->randomElement(TicketCategory::cases());
+        $category = fake()->randomElement(TicketCategory::cases());
         $templatesList = $templates[$category->value] ?? $templates[TicketCategory::GeneralInquiry->value];
-        $template = $this->faker->randomElement($templatesList);
+        $template = fake()->randomElement($templatesList);
 
-        $senderName = $this->faker->name();
+        $senderName = fake()->name();
         // Clean sender name for email prefix: e.g. "Dr. John Doe MD" -> "dr.john.doe.md"
         $emailPrefix = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '.', $senderName));
-        $senderEmail = $emailPrefix . '@' . $this->faker->safeEmailDomain();
+        $senderEmail = $emailPrefix . '@' . fake()->safeEmailDomain();
 
-        $createdAt = $this->faker->dateTimeBetween('-30 days', 'now');
+        $createdAt = fake()->dateTimeBetween('-30 days', 'now');
 
         return [
             'sender_name' => $senderName,
             'sender_email' => $senderEmail,
             'subject' => $template['subject'],
             'body' => $template['body'],
-            'status' => $this->faker->randomElement([TicketStatus::Open, TicketStatus::Resolved, TicketStatus::Closed]),
-            'priority' => $this->faker->randomElement(TicketPriority::cases()),
+            'status' => fake()->randomElement([TicketStatus::Open, TicketStatus::Resolved, TicketStatus::Closed]),
+            'priority' => fake()->randomElement(TicketPriority::cases()),
             'category' => $category,
             'assigned_agent_id' => function () {
                 // 50% chance of being assigned to a random agent
@@ -178,7 +178,7 @@ class TicketFactory extends Factory
                 return null;
             },
             'created_at' => $createdAt,
-            'updated_at' => $this->faker->dateTimeBetween($createdAt, 'now'),
+            'updated_at' => fake()->dateTimeBetween($createdAt, 'now'),
         ];
     }
 }

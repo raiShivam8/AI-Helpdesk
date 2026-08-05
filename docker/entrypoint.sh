@@ -50,5 +50,8 @@ php artisan schedule:work &
 echo "🌟 Starting PHP-FPM..."
 php-fpm -D
 
+echo "🌐 Configuring Nginx to listen on port ${PORT}..."
+sed -i "s/listen [0-9]*;/listen ${PORT};/g" /etc/nginx/http.d/default.conf || true
+
 echo "🌐 Starting Nginx on port ${PORT}..."
 exec nginx -g "daemon off;"

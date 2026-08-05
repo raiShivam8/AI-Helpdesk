@@ -44,7 +44,7 @@ RUN composer dump-autoload \
 # =========================================================
 # Stage 3: Laravel Production Runtime
 # =========================================================
-FROM php:8.3-fpm-alpine AS production
+FROM php:8.4-fpm-alpine AS production
 
 
 # Install PHP dependencies
@@ -62,10 +62,6 @@ RUN apk add --no-cache \
     libzip-dev \
     postgresql-libs \
     postgresql-dev \
-    imap-dev \
-    c-client \
-    krb5-dev \
-    openssl-dev \
     icu-libs \
     icu-dev \
     oniguruma-dev \
@@ -77,9 +73,6 @@ RUN apk add --no-cache \
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg \
-    && docker-php-ext-configure imap \
-    --with-kerberos \
-    --with-imap-ssl \
     && docker-php-ext-install -j$(nproc) \
     pdo \
     pdo_pgsql \
@@ -90,8 +83,7 @@ RUN docker-php-ext-configure gd \
     bcmath \
     opcache \
     intl \
-    mbstring \
-    imap
+    mbstring
 
 
 # PHP production settings
@@ -132,6 +124,8 @@ COPY --from=composer /app/vendor ./vendor
 # Copy entrypoint
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
+# Copy nginx config
+COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 

@@ -25,20 +25,20 @@ class DashboardController extends Controller
         $aiResolutionPct   = $totalTickets > 0 ? round(($aiResolvedCount / $totalTickets) * 100, 1) . '%' : '0%';
 
         $resolvedTickets = Ticket::where(function ($q) {
-            $q->whereNotNull('resolved_at')->orWhereNotNull('ai_resolved_at');
+            $q->whereNotNull('resolved_at')
+              ->orWhereNotNull('ai_resolved_at')
+              ->orWhereIn('status', [TicketStatus::Resolved, TicketStatus::Closed]);
         })->get();
 
         if ($resolvedTickets->count() > 0) {
             $totalSeconds = $resolvedTickets->sum(function ($t) {
-                $endTime = $t->resolved_at ?? $t->ai_resolved_at;
-                return $t->created_at ? max(0, $t->created_at->diffInSeconds($endTime)) : 0;
+                $endTime = $t->resolved_at ?? $t->ai_resolved_at ?? $t->updated_at;
+                return $t->created_at ? max(300, $t->created_at->diffInSeconds($endTime)) : 0;
             });
             $avgSeconds = $totalSeconds / $resolvedTickets->count();
 
-            if ($avgSeconds < 60) {
-                $avgResolutionHours = round($avgSeconds) . 's';
-            } elseif ($avgSeconds < 3600) {
-                $avgResolutionHours = round($avgSeconds / 60) . ' mins';
+            if ($avgSeconds < 3600) {
+                $avgResolutionHours = max(1, round($avgSeconds / 60)) . ' mins';
             } else {
                 $avgResolutionHours = round($avgSeconds / 3600, 1) . ' hrs';
             }

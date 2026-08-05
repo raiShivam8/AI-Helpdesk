@@ -162,12 +162,23 @@ class TicketFactory extends Factory
 
         $createdAt = fake()->dateTimeBetween('-30 days', 'now');
 
+        $status = fake()->randomElement([TicketStatus::Open, TicketStatus::Resolved, TicketStatus::Closed]);
+        $resolvedAt = null;
+        $aiResolvedAt = null;
+
+        if ($status === TicketStatus::Resolved || $status === TicketStatus::Closed) {
+            $resolvedAt = fake()->dateTimeBetween($createdAt, 'now');
+            if (fake()->boolean(40)) {
+                $aiResolvedAt = $resolvedAt;
+            }
+        }
+
         return [
             'sender_name' => $senderName,
             'sender_email' => $senderEmail,
             'subject' => $template['subject'],
             'body' => $template['body'],
-            'status' => fake()->randomElement([TicketStatus::Open, TicketStatus::Resolved, TicketStatus::Closed]),
+            'status' => $status,
             'priority' => fake()->randomElement(TicketPriority::cases()),
             'category' => $category,
             'assigned_agent_id' => function () {
@@ -177,8 +188,10 @@ class TicketFactory extends Factory
                 }
                 return null;
             },
+            'resolved_at' => $resolvedAt,
+            'ai_resolved_at' => $aiResolvedAt,
             'created_at' => $createdAt,
-            'updated_at' => fake()->dateTimeBetween($createdAt, 'now'),
+            'updated_at' => $resolvedAt ?? fake()->dateTimeBetween($createdAt, 'now'),
         ];
     }
 }

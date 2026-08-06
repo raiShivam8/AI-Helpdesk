@@ -25,6 +25,12 @@ chmod -R 775 \
     /var/www/html/storage \
     /var/www/html/bootstrap/cache || true
 
+# Generate APP_KEY if missing
+if [ -z "$APP_KEY" ]; then
+    echo "🔑 APP_KEY is empty. Generating key..."
+    php artisan key:generate --force || true
+fi
+
 echo "🔗 Creating storage link..."
 php artisan storage:link --force || true
 
@@ -53,8 +59,16 @@ php artisan schedule:work &
 echo "🌟 Starting PHP-FPM..."
 php-fpm -D
 
+echo "⏳ Waiting for PHP-FPM socket on port 9000..."
+while ! nc -z 127.0.0.1 9000; do
+    sleep 0.1
+done
+echo "✅ PHP-FPM is ready!"
+
 echo "🌐 Configuring Nginx to listen on port ${PORT}..."
-sed -i "s/listen [0-9]*;/listen ${PORT};/g" /etc/nginx/http.d/default.conf || true
+mkdir -p /etc/nginx/http.d /etc/nginx/conf.d
+rm -f /etc/nginx/http.d/*.conf /etc/nginx/conf.d/*.conf
+sed "s/PORT_PLACEHOLDER/${PORT}/g" /var/www/html/docker/nginx.conf > /etc/nginx/http.d/default.conf
 
 echo "🌐 Starting Nginx on port ${PORT}..."
 exec nginx -g "daemon off;"

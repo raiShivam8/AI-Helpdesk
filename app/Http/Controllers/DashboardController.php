@@ -70,6 +70,45 @@ class DashboardController extends Controller
             $chartData[]    = (int) ($rawCounts[$date] ?? 0);
         }
 
+        // ── Category & Status Breakdown (For Industrial Doughnut/Pie Analytics) ──────
+        $rawCategoryCounts = Ticket::select('category', DB::raw('COUNT(*) AS total'))
+            ->groupBy('category')
+            ->pluck('total', 'category')
+            ->toArray();
+
+        $categoryLabels = [];
+        $categoryData   = [];
+
+        foreach (\App\Enums\TicketCategory::cases() as $cat) {
+            $val   = $cat->value;
+            $count = (int) ($rawCategoryCounts[$val] ?? 0);
+            if ($count > 0 || empty($rawCategoryCounts)) {
+                $categoryLabels[] = $val;
+                $categoryData[]   = $count;
+            }
+        }
+
+        // If no categorized tickets yet, add fallback categories for empty state visualization
+        if (array_sum($categoryData) === 0) {
+            $categoryLabels = ['Technical Question', 'Refund Request', 'General Support', 'Account Issues'];
+            $categoryData   = [0, 0, 0, 0];
+        }
+
+        $rawStatusCounts = Ticket::select('status', DB::raw('COUNT(*) AS total'))
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->toArray();
+
+        $statusLabels = [];
+        $statusData   = [];
+
+        foreach (\App\Enums\TicketStatus::cases() as $st) {
+            $val   = $st->value;
+            $count = (int) ($rawStatusCounts[$val] ?? 0);
+            $statusLabels[] = ucfirst($val);
+            $statusData[]   = $count;
+        }
+
         // ── Recent Tickets (Paginated 10 per page, up to 100 total) ─────────────
         $tickets = Ticket::with('assignedAgent')
             ->latest()
@@ -83,6 +122,10 @@ class DashboardController extends Controller
             'avgResolutionHours',
             'chartLabels',
             'chartData',
+            'categoryLabels',
+            'categoryData',
+            'statusLabels',
+            'statusData',
             'tickets',
         ));
     }

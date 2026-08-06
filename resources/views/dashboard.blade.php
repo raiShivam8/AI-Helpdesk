@@ -88,16 +88,26 @@
 
     </div>
 
-    {{-- ═══ Chart: Tickets per Day (Responsive Bar on Desktop / Pie on Mobile) ═══ --}}
+    {{-- ═══ Industrial Chart: Responsive Analytics (Bar / Category Donut / Status Donut) ═══ --}}
     <div class="card p-5 mb-8">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
-                <h2 id="chartTitleText" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Tickets Created</h2>
-                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Last 30 days overview</p>
+                <h2 id="chartTitleText" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Ticket Analytics</h2>
+                <p id="chartSubTitleText" class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">30 days activity overview</p>
             </div>
-            <span id="chartBadgeText" class="text-xs text-slate-400 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1 rounded-full ring-1 ring-slate-200 dark:ring-slate-600">Daily</span>
+            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl ring-1 ring-slate-200 dark:ring-slate-700/60 self-start sm:self-auto">
+                <button type="button" id="btnChartBar" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs">
+                    Daily Bar
+                </button>
+                <button type="button" id="btnChartCategory" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+                    Category Donut
+                </button>
+                <button type="button" id="btnChartStatus" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+                    Status Donut
+                </button>
+            </div>
         </div>
-        <div class="relative h-64 sm:h-52">
+        <div class="relative h-64 sm:h-60 flex items-center justify-center">
             <canvas id="ticketsBarChart"></canvas>
         </div>
     </div>
@@ -312,16 +322,21 @@
                 const ctx = document.getElementById('ticketsBarChart');
                 if (!ctx) return;
 
-                const labels = @json($chartLabels);
-                const data   = @json($chartData);
-                const chartTitleEl = document.getElementById('chartTitleText');
-                const chartBadgeEl = document.getElementById('chartBadgeText');
+                const dailyLabels    = @json($chartLabels);
+                const dailyData      = @json($chartData);
+                const categoryLabels = @json($categoryLabels);
+                const categoryData   = @json($categoryData);
+                const statusLabels   = @json($statusLabels);
+                const statusData     = @json($statusData);
 
-                const pieColors = [
-                    '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
-                    '#eab308', '#10b981', '#06b6d4', '#3b82f6', '#14b8a6',
-                    '#a855f7', '#d946ef', '#fb923c', '#facc15', '#4ade80'
-                ];
+                const chartTitleEl    = document.getElementById('chartTitleText');
+                const chartSubTitleEl = document.getElementById('chartSubTitleText');
+                const btnBar          = document.getElementById('btnChartBar');
+                const btnCategory     = document.getElementById('btnChartCategory');
+                const btnStatus       = document.getElementById('btnChartStatus');
+
+                // Industrial Dark/Light Palette
+                const industrialColors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#06b6d4', '#14b8a6'];
 
                 function isDark() {
                     return document.documentElement.classList.contains('dark');
@@ -331,65 +346,154 @@
                     return window.innerWidth < 640;
                 }
 
-                function getColors() {
+                function getThemeColors() {
                     const dark = isDark();
                     return {
-                        barBg      : dark ? 'rgba(99, 102, 241, 0.65)' : 'rgba(99, 102, 241, 0.80)',
-                        barBorder  : dark ? 'rgba(129, 140, 248, 1)'   : 'rgba(79, 70, 229, 1)',
+                        barBg      : dark ? 'rgba(99, 102, 241, 0.70)' : 'rgba(99, 102, 241, 0.85)',
+                        barBorder  : dark ? '#818cf8'                   : '#4f46e5',
                         tickColor  : dark ? '#94a3b8'                   : '#64748b',
                         gridColor  : dark ? 'rgba(255,255,255,0.06)'    : '#f1f5f9',
                         tooltipBg  : dark ? '#1e293b'                   : '#ffffff',
                         tooltipText: dark ? '#f1f5f9'                   : '#0f172a',
                         tooltipBdr : dark ? '#334155'                   : '#e2e8f0',
+                        ringBorder : dark ? '#1e293b'                   : '#ffffff',
                     };
                 }
 
+                let currentView = isMobile() ? 'category' : 'bar';
                 let chartInstance = null;
 
-                function buildChart() {
+                // Industrial Plugin: Draw total ticket count inside Doughnut hole
+                const centerTextPlugin = {
+                    id: 'centerText',
+                    beforeDraw(chart) {
+                        if (chart.config.type !== 'doughnut') return;
+                        const { ctx, chartArea } = chart;
+                        if (!chartArea) return;
+
+                        const { width, height, top, left } = chartArea;
+                        ctx.save();
+
+                        const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                        const dark = isDark();
+
+                        const centerX = left + width / 2;
+                        const centerY = top + height / 2 - 6;
+
+                        ctx.font = 'bold 22px Inter, sans-serif';
+                        ctx.fillStyle = dark ? '#f8fafc' : '#0f172a';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(total, centerX, centerY);
+
+                        ctx.font = '500 11px Inter, sans-serif';
+                        ctx.fillStyle = dark ? '#94a3b8' : '#64748b';
+                        ctx.fillText('Total Tickets', centerX, centerY + 22);
+
+                        ctx.restore();
+                    }
+                };
+
+                function updateTabUI() {
+                    const activeCls   = ['bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-xs'];
+                    const inactiveCls = ['text-slate-500', 'hover:text-slate-900', 'dark:text-slate-400', 'dark:hover:text-white'];
+
+                    [btnBar, btnCategory, btnStatus].forEach(btn => {
+                        if (btn) btn.classList.remove(...activeCls);
+                        if (btn) btn.classList.add(...inactiveCls);
+                    });
+
+                    if (currentView === 'bar' && btnBar) {
+                        btnBar.classList.remove(...inactiveCls);
+                        btnBar.classList.add(...activeCls);
+                    } else if (currentView === 'category' && btnCategory) {
+                        btnCategory.classList.remove(...inactiveCls);
+                        btnCategory.classList.add(...activeCls);
+                    } else if (currentView === 'status' && btnStatus) {
+                        btnStatus.classList.remove(...inactiveCls);
+                        btnStatus.classList.add(...activeCls);
+                    }
+                }
+
+                function renderChart() {
                     if (chartInstance) {
                         chartInstance.destroy();
                     }
 
-                    const mobile = isMobile();
-                    const c = getColors();
+                    const c = getThemeColors();
+                    updateTabUI();
 
-                    if (chartTitleEl) {
-                        chartTitleEl.textContent = mobile ? 'Tickets Distribution (Pie Chart)' : 'Tickets Created';
-                    }
-                    if (chartBadgeEl) {
-                        chartBadgeEl.textContent = mobile ? 'Pie Chart' : 'Daily';
-                    }
+                    let type = 'bar';
+                    let labels = [];
+                    let data = [];
+                    let bgColors = c.barBg;
+                    let borderColors = c.barBorder;
 
-                    const chartType = mobile ? 'pie' : 'bar';
+                    if (currentView === 'bar') {
+                        type = 'bar';
+                        labels = dailyLabels;
+                        data = dailyData;
+                        if (chartTitleEl) chartTitleEl.textContent = 'Tickets Created (Daily)';
+                        if (chartSubTitleEl) chartSubTitleEl.textContent = 'Last 30 days daily overview';
+                    } else if (currentView === 'category') {
+                        type = 'doughnut';
+                        labels = categoryLabels;
+                        data = categoryData;
+                        bgColors = industrialColors.slice(0, labels.length);
+                        borderColors = c.ringBorder;
+                        if (chartTitleEl) chartTitleEl.textContent = 'Category Distribution (Industrial Donut)';
+                        if (chartSubTitleEl) chartSubTitleEl.textContent = 'Breakdown by ticket category';
+                    } else if (currentView === 'status') {
+                        type = 'doughnut';
+                        labels = statusLabels;
+                        data = statusData;
+                        bgColors = ['#3b82f6', '#8b5cf6', '#10b981', '#64748b'].slice(0, labels.length);
+                        borderColors = c.ringBorder;
+                        if (chartTitleEl) chartTitleEl.textContent = 'Status Breakdown (Industrial Donut)';
+                        if (chartSubTitleEl) chartSubTitleEl.textContent = 'Current status distribution';
+                    }
 
                     chartInstance = new Chart(ctx, {
-                        type: chartType,
+                        type: type,
                         data: {
                             labels: labels,
                             datasets: [{
-                                label: 'Tickets Created',
+                                label: 'Tickets',
                                 data: data,
-                                backgroundColor: mobile ? pieColors.slice(0, data.length) : c.barBg,
-                                borderColor: mobile ? (isDark() ? '#1e293b' : '#ffffff') : c.barBorder,
-                                borderWidth: mobile ? 2 : 1.5,
-                                borderRadius: mobile ? 0 : 5,
-                                borderSkipped: false,
+                                backgroundColor: bgColors,
+                                borderColor: borderColors,
+                                borderWidth: type === 'doughnut' ? 3 : 1.5,
+                                borderRadius: type === 'bar' ? 5 : 0,
+                                hoverOffset: type === 'doughnut' ? 6 : 0,
                             }]
                         },
+                        plugins: [centerTextPlugin],
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            animation: { duration: 300 },
+                            cutout: type === 'doughnut' ? '70%' : 0,
+                            animation: { duration: 350 },
                             plugins: {
                                 legend: {
-                                    display: mobile,
+                                    display: type === 'doughnut',
                                     position: 'bottom',
                                     labels: {
                                         color: c.tickColor,
-                                        font: { size: 10, family: 'Inter, sans-serif' },
-                                        padding: 10,
+                                        font: { size: 11, family: 'Inter, sans-serif' },
+                                        padding: 14,
                                         boxWidth: 10,
+                                        usePointStyle: true,
+                                        pointStyle: 'circle',
+                                        generateLabels: function(chart) {
+                                            const orig = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                            const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                            return orig.map((item, idx) => {
+                                                const val = chart.data.datasets[0].data[idx] || 0;
+                                                const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                                                item.text = `${item.text} (${val} • ${pct}%)`;
+                                                return item;
+                                            });
+                                        }
                                     }
                                 },
                                 tooltip: {
@@ -408,7 +512,7 @@
                                     }
                                 }
                             },
-                            scales: mobile ? {} : {
+                            scales: type === 'doughnut' ? {} : {
                                 x: {
                                     grid: { display: false },
                                     border: { display: false },
@@ -435,26 +539,33 @@
                     });
                 }
 
-                buildChart();
+                // Initial render
+                renderChart();
 
-                // ── Dynamic resize listener for mobile <-> desktop toggle ──
+                // Button event listeners
+                if (btnBar)      btnBar.addEventListener('click', () => { currentView = 'bar'; renderChart(); });
+                if (btnCategory) btnCategory.addEventListener('click', () => { currentView = 'category'; renderChart(); });
+                if (btnStatus)   btnStatus.addEventListener('click', () => { currentView = 'status'; renderChart(); });
+
+                // Responsive auto-switch on screen resize
                 let resizeTimer;
-                let currentIsMobile = isMobile();
-
                 window.addEventListener('resize', function () {
                     clearTimeout(resizeTimer);
                     resizeTimer = setTimeout(function () {
                         const newIsMobile = isMobile();
-                        if (newIsMobile !== currentIsMobile) {
-                            currentIsMobile = newIsMobile;
-                            buildChart();
+                        if (newIsMobile && currentView === 'bar') {
+                            currentView = 'category';
+                            renderChart();
+                        } else if (!newIsMobile && currentView === 'category') {
+                            currentView = 'bar';
+                            renderChart();
                         }
                     }, 150);
                 });
 
-                // ── Dark mode observer ──
+                // Dark mode observer
                 const observer = new MutationObserver(function () {
-                    buildChart();
+                    renderChart();
                 });
 
                 observer.observe(document.documentElement, {

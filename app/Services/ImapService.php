@@ -4,30 +4,64 @@ namespace App\Services;
 
 use App\Actions\CreateTicketFromInboundEmailAction;
 use App\Models\Ticket;
+use App\Jobs\ProcessInboundEmailJob;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Webklex\IMAP\Facades\Client;
 use Webklex\PHPIMAP\Client as ImapClient;
 
 class ImapService
 {
+    public const UID_CACHE_KEY = 'imap_last_processed_uid';
+
     public function __construct(
         protected CreateTicketFromInboundEmailAction $createTicketAction,
         protected InboundEmailValidationService $validator
     ) {}
 
     /**
-     * Fetch unread/unseen emails from IMAP inbox, filter out self-sent/auto-generated/duplicate emails,
-     * create helpdesk tickets, mark emails as read, and dispatch background classification & auto-resolution jobs.
+     * Get the last processed IMAP message UID from storage.
+     */
+    public function getLastProcessedUid(): int
+    {
+        return (int) Cache::get(self::UID_CACHE_KEY, 0);
+    }
+
+    /**
+     * Set the last processed IMAP message UID in storage.
+     */
+    public function setLastProcessedUid(int $uid): void
+    {
+        Cache::forever(self::UID_CACHE_KEY, $uid);
+    }
+
+    /**
+     * Reset the stored last processed IMAP message UID.
+     */
+    public function resetLastProcessedUid(): void
+    {
+        Cache::forget(self::UID_CACHE_KEY);
+    }
+
+    /**
+     * Fetch new emails from IMAP inbox using UID-based sequence range.
+     * Dispatches ProcessInboundEmailJob to queue and marks emails as Seen.
      *
      * @param ImapClient|null $client Optional client instance for dependency injection / testing
-     * @return int Number of processed emails
+     * @return int Number of processed/queued emails
      */
     public function fetchUnreadEmails(?ImapClient $client = null, bool $onlyUnseen = true, int $limit = 20): int
     {
         @set_time_limit(180);
         @ini_set('max_execution_time', '180');
         @ini_set('memory_limit', '512M');
-        Log::info('Starting IMAP email fetch process', ['only_unseen' => $onlyUnseen, 'limit' => $limit]);
+
+        $lastUid = $this->getLastProcessedUid();
+        Log::info('Starting IMAP email fetch process', [
+            'only_unseen' => $onlyUnseen,
+            'limit'       => $limit,
+            'last_uid'    => $lastUid,
+        ]);
 
         try {
             $client = $client ?? Client::account('default');
@@ -40,39 +74,59 @@ class ImapService
             $folder = $client->getFolder('INBOX');
 
             /** @var \Webklex\PHPIMAP\Support\MessageCollection $messages */
-            if ($onlyUnseen) {
-                $messages = $folder->query()->unseen()->setFetchOrder('desc')->limit($limit)->get();
-                if ($messages->count() === 0) {
-                    $messages = $folder->query()->all()->setFetchOrder('desc')->limit($limit)->get();
-                }
+            if ($lastUid > 0) {
+                // Optimized UID-based query: fetch only messages with UID >= (lastUid + 1)
+                $messages = $folder->query()->whereUid(($lastUid + 1) . ':*')->setFetchOrder('asc')->limit($limit)->get();
+            } elseif ($onlyUnseen) {
+                $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
             } else {
-                $messages = $folder->query()->all()->setFetchOrder('desc')->limit($limit)->get();
+                $messages = $folder->query()->all()->setFetchOrder('asc')->limit($limit)->get();
             }
 
             $count = 0;
+            $maxUid = $lastUid;
 
             foreach ($messages as $message) {
                 try {
+                    $uid = 0;
+                    try {
+                        $uid = (int) $message->getUid();
+                    } catch (\Throwable $uidEx) {
+                        // ignore UID extraction error
+                    }
+
+                    if ($lastUid > 0 && $uid > 0 && $uid <= $lastUid) {
+                        continue;
+                    }
+
                     $parsed = $this->parseEmailMessage($message);
                     $senderEmail = $parsed['sender_email'] ?? '';
 
                     if (empty($senderEmail)) {
                         Log::warning('Skipping IMAP email: Unable to extract valid sender email address.', [
                             'subject' => $parsed['subject'] ?? null,
+                            'uid'     => $uid,
                         ]);
                         $message->setFlag('Seen');
+                        if ($uid > $maxUid) {
+                            $maxUid = $uid;
+                        }
                         continue;
                     }
 
-                    // 1. Validate if email is a genuine customer support query (filters self-sent, bots, marketing, newsletters, system alerts)
+                    // 1. Validate if email is a genuine customer support query
                     $validation = $this->validator->validateInboundEmail($parsed, $message);
                     if (!$validation['is_valid']) {
                         Log::info('Skipping IMAP email: ' . $validation['reason'], [
                             'sender_email' => $senderEmail,
                             'subject'      => $parsed['subject'] ?? null,
                             'reason'       => $validation['reason'],
+                            'uid'          => $uid,
                         ]);
                         $message->setFlag('Seen');
+                        if ($uid > $maxUid) {
+                            $maxUid = $uid;
+                        }
                         continue;
                     }
 
@@ -82,37 +136,48 @@ class ImapService
                             'message_id'   => $parsed['message_id'],
                             'sender_email' => $senderEmail,
                             'subject'      => $parsed['subject'] ?? null,
+                            'uid'          => $uid,
                         ]);
                         $message->setFlag('Seen');
+                        if ($uid > $maxUid) {
+                            $maxUid = $uid;
+                        }
                         continue;
                     }
 
-                    // 3. Create ticket & initial reply via Action, then mark email as read ONLY on success
-                    $ticket = $this->createTicketFromInbound($parsed);
+                    // 3. Dispatch ProcessInboundEmailJob to background queue
+                    ProcessInboundEmailJob::dispatch($parsed);
                     $message->setFlag('Seen');
 
+                    if ($uid > $maxUid) {
+                        $maxUid = $uid;
+                    }
+
                     $count++;
-                    Log::info('Successfully processed IMAP email into ticket', [
-                        'ticket_id'    => $ticket->id,
-                        'message_id'   => $ticket->message_id,
-                        'sender_email' => $ticket->sender_email,
-                        'subject'      => $ticket->subject,
+                    Log::info('Dispatched inbound email processing job', [
+                        'message_id'   => $parsed['message_id'] ?? null,
+                        'sender_email' => $senderEmail,
+                        'subject'      => $parsed['subject'] ?? null,
+                        'uid'          => $uid,
                     ]);
                 } catch (\Throwable $msgEx) {
                     report($msgEx);
-                    Log::error('Failed to process individual IMAP email: ' . $msgEx->getMessage(), [
+                    Log::error('Failed to dispatch individual IMAP email job: ' . $msgEx->getMessage(), [
                         'exception' => $msgEx,
                     ]);
-                    // Note: Do NOT set 'Seen' flag if processing failed so it can be inspected / retried.
                 }
             }
 
-            Log::info("IMAP unread email fetch process completed. Processed {$count} emails.");
+            if ($maxUid > $lastUid) {
+                $this->setLastProcessedUid($maxUid);
+            }
+
+            Log::info("IMAP email fetch process completed. Processed/queued {$count} emails. New last_uid: {$maxUid}");
 
             return $count;
         } catch (\Throwable $e) {
             report($e);
-            Log::error('Failed to execute IMAP unread email fetch: ' . $e->getMessage(), [
+            Log::error('Failed to execute IMAP email fetch: ' . $e->getMessage(), [
                 'exception' => $e,
             ]);
 

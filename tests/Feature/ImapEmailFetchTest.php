@@ -49,6 +49,7 @@ class ImapEmailFetchTest extends TestCase
         $mockMessage->shouldReceive('hasTextBody')->andReturn(true);
         $mockMessage->shouldReceive('getTextBody')->andReturn('I have a problem with my invoice payment.');
         $mockMessage->shouldReceive('getMessageId')->andReturn('<msg-101@example.com>');
+        $mockMessage->shouldReceive('getUid')->byDefault()->andReturn(101);
         $mockMessage->shouldReceive('setFlag')->with('Seen')->once();
 
         $messageCollection = new MessageCollection([$mockMessage]);
@@ -122,6 +123,7 @@ class ImapEmailFetchTest extends TestCase
         $mockMessage->shouldReceive('hasTextBody')->andReturn(true);
         $mockMessage->shouldReceive('getTextBody')->andReturn('Replying to customer...');
         $mockMessage->shouldReceive('getMessageId')->andReturn('<msg-self@example.com>');
+        $mockMessage->shouldReceive('getUid')->byDefault()->andReturn(102);
         $mockMessage->shouldReceive('setFlag')->with('Seen')->once();
 
         $messageCollection = new MessageCollection([$mockMessage]);
@@ -159,6 +161,7 @@ class ImapEmailFetchTest extends TestCase
         $mockMessage->shouldReceive('hasTextBody')->andReturn(true);
         $mockMessage->shouldReceive('getTextBody')->andReturn('I have a question about my monthly plan.');
         $mockMessage->shouldReceive('getMessageId')->andReturn('<msg-ext@example.com>');
+        $mockMessage->shouldReceive('getUid')->byDefault()->andReturn(103);
         $mockMessage->shouldReceive('setFlag')->with('Seen')->once();
 
         $messageCollection = new MessageCollection([$mockMessage]);
@@ -201,6 +204,7 @@ class ImapEmailFetchTest extends TestCase
         $mockMessage->shouldReceive('hasTextBody')->andReturn(true);
         $mockMessage->shouldReceive('getTextBody')->andReturn('Duplicate body');
         $mockMessage->shouldReceive('getMessageId')->andReturn('<unique-msg-id-999@example.com>');
+        $mockMessage->shouldReceive('getUid')->byDefault()->andReturn(104);
         $mockMessage->shouldReceive('setFlag')->with('Seen')->once();
 
         $messageCollection = new MessageCollection([$mockMessage]);
@@ -228,12 +232,12 @@ class ImapEmailFetchTest extends TestCase
     public function test_fetch_emails_artisan_command_executes_successfully(): void
     {
         $mockService = Mockery::mock(ImapService::class);
+        $mockService->shouldReceive('getLastProcessedUid')->andReturn(0);
         $mockService->shouldReceive('fetchUnreadEmails')->once()->andReturn(2);
         $this->app->instance(ImapService::class, $mockService);
 
         $this->artisan('tickets:fetch-emails')
-            ->expectsOutput('Starting IMAP email fetch command (onlyUnseen: true, limit: 20)...')
-            ->expectsOutput('Completed IMAP email fetch. Processed 2 email(s).')
+            ->expectsOutput('Starting IMAP email fetch command (onlyUnseen: true, limit: 20, lastUid: 0)...')
             ->assertExitCode(0);
     }
 
@@ -244,7 +248,10 @@ class ImapEmailFetchTest extends TestCase
     public function test_complete_end_to_end_flow_from_email_to_ai_processing_and_smtp_reply(): void
     {
         Mail::fake();
-        Queue::fake();
+        Queue::fake([
+            AutoResolveTicketJob::class,
+            TicketClassificationJob::class,
+        ]);
 
         // 1. Simulate incoming IMAP email message
         $mockMessage = Mockery::mock(Message::class);
@@ -258,6 +265,7 @@ class ImapEmailFetchTest extends TestCase
         $mockMessage->shouldReceive('hasTextBody')->andReturn(true);
         $mockMessage->shouldReceive('getTextBody')->andReturn('How do I reset my password?');
         $mockMessage->shouldReceive('getMessageId')->andReturn('<e2e-msg-123@example.com>');
+        $mockMessage->shouldReceive('getUid')->byDefault()->andReturn(105);
         $mockMessage->shouldReceive('setFlag')->with('Seen')->once();
 
         $messageCollection = new MessageCollection([$mockMessage]);
@@ -336,5 +344,90 @@ class ImapEmailFetchTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('success', 'Successfully synced emails! Imported 1 new customer ticket(s).');
+    }
+
+    /**
+     * Test IMAP service uses UID-based search sequence range and persists last_processed_uid.
+     */
+    public function test_imap_service_uses_uid_sequence_and_stores_last_processed_uid(): void
+    {
+        $imapService = app(ImapService::class);
+        $imapService->setLastProcessedUid(500);
+
+        $this->assertEquals(500, $imapService->getLastProcessedUid());
+
+        $mockMessage = Mockery::mock(Message::class);
+        $mockMessage->shouldReceive('getFrom')->andReturn([
+            (object) [
+                'mail' => 'uid.user@example.com',
+                'personal' => 'UID User',
+            ],
+        ]);
+        $mockMessage->shouldReceive('getSubject')->andReturn('UID range test query');
+        $mockMessage->shouldReceive('hasTextBody')->andReturn(true);
+        $mockMessage->shouldReceive('getTextBody')->andReturn('Testing UID range query.');
+        $mockMessage->shouldReceive('getMessageId')->andReturn('<uid-msg-501@example.com>');
+        $mockMessage->shouldReceive('getUid')->andReturn(501);
+        $mockMessage->shouldReceive('setFlag')->with('Seen')->once();
+
+        $messageCollection = new MessageCollection([$mockMessage]);
+
+        $mockQuery = Mockery::mock(WhereQuery::class);
+        $mockQuery->shouldReceive('whereUid')->with('501:*')->once()->andReturnSelf();
+        $mockQuery->shouldReceive('setFetchOrder')->with('asc')->once()->andReturnSelf();
+        $mockQuery->shouldReceive('limit')->andReturnSelf();
+        $mockQuery->shouldReceive('get')->once()->andReturn($messageCollection);
+
+        $mockFolder = Mockery::mock(Folder::class);
+        $mockFolder->shouldReceive('query')->once()->andReturn($mockQuery);
+
+        $mockClient = Mockery::mock(ImapClient::class);
+        $mockClient->shouldReceive('isConnected')->andReturn(true);
+        $mockClient->shouldReceive('getFolder')->with('INBOX')->once()->andReturn($mockFolder);
+
+        $count = $imapService->fetchUnreadEmails($mockClient);
+
+        $this->assertEquals(1, $count);
+        $this->assertEquals(501, $imapService->getLastProcessedUid());
+        $this->assertDatabaseHas('tickets', [
+            'message_id' => '<uid-msg-501@example.com>',
+            'sender_email' => 'uid.user@example.com',
+        ]);
+    }
+
+    /**
+     * Test ProcessInboundEmailJob processes email data into ticket and dispatches AI jobs.
+     */
+    public function test_process_inbound_email_job_creates_ticket_and_dispatches_ai_jobs(): void
+    {
+        Bus::fake([
+            TicketClassificationJob::class,
+            AutoResolveTicketJob::class,
+        ]);
+
+        $job = new \App\Jobs\ProcessInboundEmailJob([
+            'message_id'   => '<job-msg-777@example.com>',
+            'sender_email' => 'queued.customer@example.com',
+            'sender_name'  => 'Queued Customer',
+            'subject'      => 'Need help with queue',
+            'body'         => 'Issue description for queue job.',
+        ]);
+
+        $ticket = $job->handle(
+            app(\App\Services\InboundEmailValidationService::class),
+            app(\App\Actions\CreateTicketFromInboundEmailAction::class)
+        );
+
+        $this->assertNotNull($ticket);
+        $this->assertEquals('<job-msg-777@example.com>', $ticket->message_id);
+        $this->assertDatabaseHas('tickets', ['id' => $ticket->id]);
+
+        Bus::assertDispatched(AutoResolveTicketJob::class, function ($j) use ($ticket) {
+            return $j->ticket->id === $ticket->id;
+        });
+
+        Bus::assertDispatched(TicketClassificationJob::class, function ($j) use ($ticket) {
+            return $j->ticket->id === $ticket->id;
+        });
     }
 }

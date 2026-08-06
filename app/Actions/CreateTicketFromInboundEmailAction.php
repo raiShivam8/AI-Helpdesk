@@ -91,13 +91,13 @@ class CreateTicketFromInboundEmailAction
             return $ticket;
         });
 
-        // 1. Run Auto-Resolve inline first for instant (< 5ms) response & email reply
+        // 1. Dispatch Auto-Resolve to background queue so ticket creation is instant
         try {
-            Log::info('Running fast AI auto-resolve synchronously', ['ticket_id' => $ticket->id]);
-            AutoResolveTicketJob::dispatchSync($ticket);
+            Log::info('Dispatching AI auto-resolve to background queue', ['ticket_id' => $ticket->id]);
+            AutoResolveTicketJob::dispatch($ticket);
         } catch (\Throwable $autoEx) {
             report($autoEx);
-            Log::warning('AI auto-resolve failed (non-fatal), ticket kept open for manual review', [
+            Log::warning('Failed to dispatch AI auto-resolve job', [
                 'ticket_id' => $ticket->id,
                 'error'     => $autoEx->getMessage(),
             ]);

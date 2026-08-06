@@ -373,7 +373,7 @@ class ImapEmailFetchTest extends TestCase
         $messageCollection = new MessageCollection([$mockMessage]);
 
         $mockQuery = Mockery::mock(WhereQuery::class);
-        $mockQuery->shouldReceive('whereUid')->with('501:*')->once()->andReturnSelf();
+        $mockQuery->shouldReceive('where')->with('CUSTOM UID 501:*')->once()->andReturnSelf();
         $mockQuery->shouldReceive('setFetchOrder')->with('asc')->once()->andReturnSelf();
         $mockQuery->shouldReceive('limit')->andReturnSelf();
         $mockQuery->shouldReceive('get')->once()->andReturn($messageCollection);

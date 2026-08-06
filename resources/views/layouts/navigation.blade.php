@@ -2,13 +2,27 @@
      SIDEBAR NAVIGATION
      Fixed left-rail with logo, nav links, user footer
 ═══════════════════════════════════════════════ --}}
+{{-- Mobile Backdrop Overlay --}}
+<div
+    x-show="sidebarOpen"
+    x-transition:enter="transition-opacity ease-linear duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition-opacity ease-linear duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    @click="sidebarOpen = false"
+    class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 lg:hidden"
+    x-cloak
+></div>
+
 <aside
-    x-data="{ open: false }"
-    class="fixed inset-y-0 left-0 w-[260px] flex flex-col z-30 shadow-sm transition-colors duration-300"
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+    class="fixed inset-y-0 left-0 w-[260px] flex flex-col z-40 shadow-xl lg:shadow-sm transition-transform duration-300 ease-in-out"
     style="background-color: var(--bg-sidebar); border-right: 1px solid var(--border-default);"
 >
     {{-- ── Logo ── --}}
-    <div class="h-16 flex items-center gap-3 px-5 shrink-0" style="border-bottom: 1px solid var(--border-default);">
+    <div class="h-16 flex items-center justify-between gap-3 px-5 shrink-0" style="border-bottom: 1px solid var(--border-default);">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3 min-w-0">
             <x-application-logo class="h-9 w-9 rounded-xl shadow-sm shrink-0" />
             <div class="min-w-0">
@@ -18,6 +32,11 @@
                 <span class="block text-[11px] font-medium tracking-wide" style="color: var(--text-muted);">Support Portal</span>
             </div>
         </a>
+        <button @click="sidebarOpen = false" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
     </div>
 
     {{-- ── Navigation ── --}}

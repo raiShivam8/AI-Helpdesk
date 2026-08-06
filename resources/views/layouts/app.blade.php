@@ -28,19 +28,32 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased transition-colors duration-300"
-          style="background-color: var(--bg-page); color: var(--text-primary);">
+          style="background-color: var(--bg-page); color: var(--text-primary);"
+          x-data="{ sidebarOpen: false }">
 
-        <div class="flex min-h-screen">
+        <div class="flex min-h-screen relative overflow-x-hidden">
 
             {{-- ════════ SIDEBAR ════════ --}}
             @include('layouts.navigation')
 
             {{-- ════════ MAIN AREA ════════ --}}
-            <div class="flex-1 flex flex-col min-w-0 ml-[260px]">
+            <div class="flex-1 flex flex-col min-w-0 w-full lg:ml-[260px] transition-all duration-300">
 
                 {{-- Top header bar --}}
-                <header class="sticky top-0 z-20 backdrop-blur-sm border-b h-16 flex items-center px-6 gap-4 shrink-0"
+                <header class="sticky top-0 z-20 backdrop-blur-sm border-b h-16 flex items-center px-4 sm:px-6 gap-3 shrink-0"
                         style="background-color: var(--bg-header); border-color: var(--border-default);">
+
+                    {{-- Mobile Hamburger Menu Button --}}
+                    <button
+                        @click="sidebarOpen = !sidebarOpen"
+                        type="button"
+                        class="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        aria-label="Toggle navigation menu"
+                    >
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
 
                     {{-- Page title slot --}}
                     <div class="flex-1 min-w-0">
@@ -87,7 +100,7 @@
                 </header>
 
                 {{-- Page Content --}}
-                <main class="flex-1 p-6 lg:p-8 animate-in">
+                <main class="flex-1 p-4 sm:p-6 lg:p-8 animate-in">
                     {{ $slot }}
                 </main>
 

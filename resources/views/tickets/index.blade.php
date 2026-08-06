@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between w-full">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
             <div>
                 <h1 class="text-lg font-bold text-slate-900 dark:text-white">Tickets</h1>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Support queue — all incoming requests</p>

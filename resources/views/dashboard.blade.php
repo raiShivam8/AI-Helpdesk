@@ -24,7 +24,7 @@
     </x-slot>
 
     {{-- ═══ Stats Overview ═══ --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
         {{-- Total Tickets --}}
         <div class="stat-card group hover:shadow-md transition-shadow duration-200">
@@ -78,31 +78,18 @@
             </div>
         </div>
 
-        {{-- Avg Resolution Time --}}
-        <div class="stat-card group hover:shadow-md transition-shadow duration-200">
-            <div class="w-11 h-11 rounded-2xl bg-sky-50 dark:bg-sky-900/40 flex items-center justify-center shrink-0 group-hover:bg-sky-100 dark:group-hover:bg-sky-900/60 transition-colors">
-                <svg class="w-5 h-5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-            <div>
-                <p class="text-2xl font-bold text-slate-900 dark:text-white leading-none">{{ $avgResolutionHours }}</p>
-                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">Avg Resolution Time</p>
-            </div>
-        </div>
-
     </div>
 
-    {{-- ═══ Bar Chart: Tickets per Day (last 30 days) ═══ --}}
+    {{-- ═══ Chart: Tickets per Day (Responsive Bar on Desktop / Pie on Mobile) ═══ --}}
     <div class="card p-5 mb-8">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Tickets Created</h2>
-                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Last 30 days</p>
+                <h2 id="chartTitleText" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Tickets Created</h2>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Last 30 days overview</p>
             </div>
-            <span class="text-xs text-slate-400 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1 rounded-full ring-1 ring-slate-200 dark:ring-slate-600">Daily</span>
+            <span id="chartBadgeText" class="text-xs text-slate-400 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/60 px-2.5 py-1 rounded-full ring-1 ring-slate-200 dark:ring-slate-600">Daily</span>
         </div>
-        <div class="relative h-52">
+        <div class="relative h-64 sm:h-52">
             <canvas id="ticketsBarChart"></canvas>
         </div>
     </div>
@@ -319,13 +306,23 @@
 
                 const labels = @json($chartLabels);
                 const data   = @json($chartData);
+                const chartTitleEl = document.getElementById('chartTitleText');
+                const chartBadgeEl = document.getElementById('chartBadgeText');
 
-                // ── Detect current mode ──────────────────────────────────
+                const pieColors = [
+                    '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316',
+                    '#eab308', '#10b981', '#06b6d4', '#3b82f6', '#14b8a6',
+                    '#a855f7', '#d946ef', '#fb923c', '#facc15', '#4ade80'
+                ];
+
                 function isDark() {
                     return document.documentElement.classList.contains('dark');
                 }
 
-                // ── Theme-aware colors ───────────────────────────────────
+                function isMobile() {
+                    return window.innerWidth < 640;
+                }
+
                 function getColors() {
                     const dark = isDark();
                     return {
@@ -339,93 +336,117 @@
                     };
                 }
 
-                // ── Build chart ──────────────────────────────────────────
-                let c = getColors();
-                const chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Tickets Created',
-                            data: data,
-                            backgroundColor: c.barBg,
-                            borderColor: c.barBorder,
-                            borderWidth: 1.5,
-                            borderRadius: 5,
-                            borderSkipped: false,
-                            hoverBackgroundColor: isDark()
-                                ? 'rgba(129, 140, 248, 0.85)'
-                                : 'rgba(79, 70, 229, 0.90)',
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: { duration: 300 },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                backgroundColor: c.tooltipBg,
-                                titleColor: c.tooltipText,
-                                bodyColor: c.tooltipText,
-                                borderColor: c.tooltipBdr,
-                                borderWidth: 1,
-                                padding: 10,
-                                cornerRadius: 8,
-                                callbacks: {
-                                    label: function(context) {
-                                        const val = context.raw || 0;
-                                        return `  ${val} ticket${val !== 1 ? 's' : ''}`;
+                let chartInstance = null;
+
+                function buildChart() {
+                    if (chartInstance) {
+                        chartInstance.destroy();
+                    }
+
+                    const mobile = isMobile();
+                    const c = getColors();
+
+                    if (chartTitleEl) {
+                        chartTitleEl.textContent = mobile ? 'Tickets Distribution (Pie Chart)' : 'Tickets Created';
+                    }
+                    if (chartBadgeEl) {
+                        chartBadgeEl.textContent = mobile ? 'Pie Chart' : 'Daily';
+                    }
+
+                    const chartType = mobile ? 'pie' : 'bar';
+
+                    chartInstance = new Chart(ctx, {
+                        type: chartType,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Tickets Created',
+                                data: data,
+                                backgroundColor: mobile ? pieColors.slice(0, data.length) : c.barBg,
+                                borderColor: mobile ? (isDark() ? '#1e293b' : '#ffffff') : c.barBorder,
+                                borderWidth: mobile ? 2 : 1.5,
+                                borderRadius: mobile ? 0 : 5,
+                                borderSkipped: false,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: { duration: 300 },
+                            plugins: {
+                                legend: {
+                                    display: mobile,
+                                    position: 'bottom',
+                                    labels: {
+                                        color: c.tickColor,
+                                        font: { size: 10, family: 'Inter, sans-serif' },
+                                        padding: 10,
+                                        boxWidth: 10,
+                                    }
+                                },
+                                tooltip: {
+                                    backgroundColor: c.tooltipBg,
+                                    titleColor: c.tooltipText,
+                                    bodyColor: c.tooltipText,
+                                    borderColor: c.tooltipBdr,
+                                    borderWidth: 1,
+                                    padding: 10,
+                                    cornerRadius: 8,
+                                    callbacks: {
+                                        label: function(context) {
+                                            const val = context.raw || 0;
+                                            return `  ${val} ticket${val !== 1 ? 's' : ''}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: mobile ? {} : {
+                                x: {
+                                    grid: { display: false },
+                                    border: { display: false },
+                                    ticks: {
+                                        font: { size: 11, family: 'Inter, sans-serif' },
+                                        color: c.tickColor,
+                                        maxTicksLimit: 10,
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    border: { display: false, dash: [4, 4] },
+                                    ticks: {
+                                        precision: 0,
+                                        font: { size: 11, family: 'Inter, sans-serif' },
+                                        color: c.tickColor,
+                                    },
+                                    grid: {
+                                        color: c.gridColor,
                                     }
                                 }
                             }
-                        },
-                        scales: {
-                            x: {
-                                grid: { display: false },
-                                border: { display: false },
-                                ticks: {
-                                    font: { size: 11, family: 'Inter, sans-serif' },
-                                    color: c.tickColor,
-                                    maxTicksLimit: 10,
-                                }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                border: { display: false, dash: [4, 4] },
-                                ticks: {
-                                    precision: 0,
-                                    font: { size: 11, family: 'Inter, sans-serif' },
-                                    color: c.tickColor,
-                                },
-                                grid: {
-                                    color: c.gridColor,
-                                }
-                            }
                         }
-                    }
+                    });
+                }
+
+                buildChart();
+
+                // ── Dynamic resize listener for mobile <-> desktop toggle ──
+                let resizeTimer;
+                let currentIsMobile = isMobile();
+
+                window.addEventListener('resize', function () {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(function () {
+                        const newIsMobile = isMobile();
+                        if (newIsMobile !== currentIsMobile) {
+                            currentIsMobile = newIsMobile;
+                            buildChart();
+                        }
+                    }, 150);
                 });
 
-                // ── Live update when user toggles dark mode ──────────────
+                // ── Dark mode observer ──
                 const observer = new MutationObserver(function () {
-                    const nc = getColors();
-                    const ds = chart.data.datasets[0];
-                    ds.backgroundColor = nc.barBg;
-                    ds.borderColor     = nc.barBorder;
-                    ds.hoverBackgroundColor = isDark()
-                        ? 'rgba(129, 140, 248, 0.85)'
-                        : 'rgba(79, 70, 229, 0.90)';
-
-                    chart.options.plugins.tooltip.backgroundColor = nc.tooltipBg;
-                    chart.options.plugins.tooltip.titleColor      = nc.tooltipText;
-                    chart.options.plugins.tooltip.bodyColor       = nc.tooltipText;
-                    chart.options.plugins.tooltip.borderColor     = nc.tooltipBdr;
-
-                    chart.options.scales.x.ticks.color = nc.tickColor;
-                    chart.options.scales.y.ticks.color = nc.tickColor;
-                    chart.options.scales.y.grid.color  = nc.gridColor;
-
-                    chart.update('none'); // no animation on theme switch
+                    buildChart();
                 });
 
                 observer.observe(document.documentElement, {

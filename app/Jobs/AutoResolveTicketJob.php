@@ -62,7 +62,7 @@ class AutoResolveTicketJob implements ShouldQueue
         }
 
         // Resolve the AI agent user
-        $aiAgent = User::where('email', AiAgentSeeder::EMAIL)->first();
+        $aiAgent = User::withTrashed()->where('email', AiAgentSeeder::EMAIL)->first();
 
         try {
             // Update ticket status to processing during analysis
@@ -165,13 +165,14 @@ class AutoResolveTicketJob implements ShouldQueue
     protected function getHumanAgentIdFallback(): ?int
     {
         if ($this->ticket->assigned_agent_id) {
-            $aiAgent = User::where('email', AiAgentSeeder::EMAIL)->first();
+            $aiAgent = User::withTrashed()->where('email', AiAgentSeeder::EMAIL)->first();
             if ($this->ticket->assigned_agent_id !== $aiAgent?->id) {
                 return $this->ticket->assigned_agent_id;
             }
         }
 
-        $humanAgent = User::where('role', Role::Agent)
+        $humanAgent = User::withTrashed()
+            ->where('role', Role::Agent)
             ->where('email', '!=', AiAgentSeeder::EMAIL)
             ->first();
 

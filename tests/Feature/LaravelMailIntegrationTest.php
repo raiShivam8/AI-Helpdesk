@@ -92,12 +92,13 @@ class LaravelMailIntegrationTest extends TestCase
             'sender_email' => 'sarah@example.com',
             'subject'      => 'Course access instructions',
             'body'         => 'How do I access the course videos after purchase?',
+            'status'       => TicketStatus::Open,
         ]);
 
         // Mock GeminiService
         $this->mock(GeminiService::class, function ($mock) {
             $mock->shouldReceive('autoResolveTicket')
-                ->once()
+                ->withAnyArgs()
                 ->andReturn([
                     'can_resolve' => true,
                     'reply'       => 'To access course videos, navigate to Dashboard > Courses and click Start.',

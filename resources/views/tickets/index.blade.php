@@ -1,23 +1,31 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-            <div>
-                <h1 class="text-lg font-bold text-slate-900 dark:text-white">Tickets</h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Support queue — all incoming requests</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <form action="{{ route('tickets.sync-emails') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Sync IMAP Emails
-                    </button>
-                </form>
+        <div class="flex items-center justify-between w-full min-w-0">
+            <div class="min-w-0">
+                <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">Tickets</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate hidden sm:block">Support queue — all incoming requests</p>
             </div>
         </div>
     </x-slot>
+
+    {{-- ═══ Page Action Header ═══ --}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+        <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white sm:hidden">Support Queue</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage and respond to all customer tickets</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <form action="{{ route('tickets.sync-emails') }}" method="POST">
+                @csrf
+                <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Sync IMAP Emails</span>
+                </button>
+            </form>
+        </div>
+    </div>
 
     @php
         $hasActiveFilters = !empty($status) || !empty($category) || !empty($agent) || !empty($search);

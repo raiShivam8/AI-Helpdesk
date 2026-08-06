@@ -40,14 +40,14 @@
             <div class="flex-1 flex flex-col min-w-0 w-full lg:ml-[260px] transition-all duration-300">
 
                 {{-- Top header bar --}}
-                <header class="sticky top-0 z-20 backdrop-blur-sm border-b h-16 flex items-center px-4 sm:px-6 gap-3 shrink-0"
+                <header class="sticky top-0 z-20 backdrop-blur-sm border-b h-16 flex items-center px-3 sm:px-6 gap-2 sm:gap-3 shrink-0 overflow-hidden"
                         style="background-color: var(--bg-header); border-color: var(--border-default);">
 
                     {{-- Mobile Hamburger Menu Button --}}
                     <button
                         @click="sidebarOpen = !sidebarOpen"
                         type="button"
-                        class="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        class="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
                         aria-label="Toggle navigation menu"
                     >
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -56,7 +56,7 @@
                     </button>
 
                     {{-- Page title slot --}}
-                    <div class="flex-1 min-w-0">
+                    <div class="flex-1 min-w-0 overflow-hidden">
                         @isset($header)
                             {{ $header }}
                         @endisset

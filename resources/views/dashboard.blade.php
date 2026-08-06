@@ -1,27 +1,35 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between w-full">
-            <div>
-                <h1 class="text-lg font-bold text-slate-900 dark:text-white">Dashboard</h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Welcome back, {{ Auth::user()->name }} 👋</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <form action="{{ route('tickets.sync-emails') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Sync IMAP Emails
-                    </button>
-                </form>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full ring-1 ring-emerald-200">
-                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                    System Online
-                </span>
+        <div class="flex items-center justify-between w-full min-w-0">
+            <div class="min-w-0">
+                <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">Dashboard</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate hidden sm:block">Welcome back, {{ Auth::user()->name }} 👋</p>
             </div>
         </div>
     </x-slot>
+
+    {{-- ═══ Page Action Header ═══ --}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white sm:hidden">Welcome back, {{ Auth::user()->name }} 👋</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Real-time support ticket operations overview</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <form action="{{ route('tickets.sync-emails') }}" method="POST" class="inline-block">
+                @csrf
+                <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>Sync IMAP Emails</span>
+                </button>
+            </form>
+            <span class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-xl ring-1 ring-emerald-200 dark:ring-emerald-700/50">
+                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                <span>System Online</span>
+            </span>
+        </div>
+    </div>
 
     {{-- ═══ Stats Overview ═══ --}}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

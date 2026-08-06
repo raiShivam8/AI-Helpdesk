@@ -21,6 +21,9 @@ class TicketAutoResolveTest extends TestCase
     {
         parent::setUp();
 
+        // Seed AI Agent user
+        $this->seed(\Database\Seeders\AiAgentSeeder::class);
+
         // Configure a secret token for testing
         config(['services.inbound_email.secret' => 'test-webhook-secret-token']);
     }

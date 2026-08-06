@@ -20,6 +20,12 @@ class LaravelMailIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\AiAgentSeeder::class);
+    }
+
     /**
      * Test that an agent posting a reply emails the customer using Laravel Mail.
      */

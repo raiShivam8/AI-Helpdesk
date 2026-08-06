@@ -35,7 +35,10 @@ php artisan route:cache || true
 php artisan view:cache || true
 
 echo "📦 Running database migrations..."
-php artisan migrate --force
+php artisan migrate --force || true
+
+echo "🌱 Seeding default users..."
+php artisan db:seed --force || true
 
 echo "⚙️ Starting Queue Worker..."
 php artisan queue:work \

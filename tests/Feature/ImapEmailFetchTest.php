@@ -372,14 +372,17 @@ class ImapEmailFetchTest extends TestCase
 
         $messageCollection = new MessageCollection([$mockMessage]);
 
-        $mockQuery = Mockery::mock(WhereQuery::class);
-        $mockQuery->shouldReceive('where')->with('CUSTOM UID 501:*')->once()->andReturnSelf();
-        $mockQuery->shouldReceive('setFetchOrder')->with('asc')->once()->andReturnSelf();
-        $mockQuery->shouldReceive('limit')->andReturnSelf();
-        $mockQuery->shouldReceive('get')->once()->andReturn($messageCollection);
+        $mockUidQuery = Mockery::mock(WhereQuery::class);
+        $mockUidQuery->shouldReceive('where')->with('CUSTOM UID 501:*')->once()->andReturnSelf();
+        $mockUidQuery->shouldReceive('pluck')->with('uid')->once()->andReturn(collect([501]));
+
+        $mockMsgQuery = Mockery::mock(WhereQuery::class);
+        $mockMsgQuery->shouldReceive('whereIn')->with('UID', [501])->once()->andReturnSelf();
+        $mockMsgQuery->shouldReceive('setFetchOrder')->with('asc')->once()->andReturnSelf();
+        $mockMsgQuery->shouldReceive('get')->once()->andReturn($messageCollection);
 
         $mockFolder = Mockery::mock(Folder::class);
-        $mockFolder->shouldReceive('query')->once()->andReturn($mockQuery);
+        $mockFolder->shouldReceive('query')->andReturnValues([$mockUidQuery, $mockMsgQuery]);
 
         $mockClient = Mockery::mock(ImapClient::class);
         $mockClient->shouldReceive('isConnected')->andReturn(true);

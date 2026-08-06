@@ -65,10 +65,17 @@ while ! nc -z 127.0.0.1 9000; do
 done
 echo "✅ PHP-FPM is ready!"
 
-echo "🌐 Configuring Nginx to listen on port ${PORT}..."
+echo "🌐 Configuring Nginx to listen on port ${PORT}, 80, and 8080..."
 mkdir -p /etc/nginx/http.d /etc/nginx/conf.d
 rm -f /etc/nginx/http.d/*.conf /etc/nginx/conf.d/*.conf
-sed "s/PORT_PLACEHOLDER/${PORT}/g" /var/www/html/docker/nginx.conf > /etc/nginx/http.d/default.conf
 
-echo "🌐 Starting Nginx on port ${PORT}..."
+# Listen on PORT, 80, and 8080 to guarantee compatibility regardless of Railway proxy settings
+LISTEN_CONF="listen ${PORT};\n    listen 80;\n"
+if [ "${PORT}" != "8080" ]; then
+    LISTEN_CONF="${LISTEN_CONF}    listen 8080;\n"
+fi
+
+sed "s/listen PORT_PLACEHOLDER;/$(printf '%s' "$LISTEN_CONF")/g" /var/www/html/docker/nginx.conf > /etc/nginx/http.d/default.conf
+
+echo "🌐 Starting Nginx..."
 exec nginx -g "daemon off;"

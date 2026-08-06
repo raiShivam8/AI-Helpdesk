@@ -75,8 +75,13 @@ class ImapService
 
             /** @var \Webklex\PHPIMAP\Support\MessageCollection $messages */
             if ($lastUid > 0) {
-                // Optimized UID-based query: fetch only messages with UID >= (lastUid + 1)
-                $messages = $folder->query()->where("CUSTOM UID " . ($lastUid + 1) . ":*")->setFetchOrder('asc')->limit($limit)->get();
+                try {
+                    // Optimized UID-based query: fetch only messages with UID >= (lastUid + 1)
+                    $messages = $folder->query()->where("CUSTOM UID " . ($lastUid + 1) . ":*")->setFetchOrder('asc')->limit($limit)->get();
+                } catch (\Throwable $e) {
+                    Log::warning('IMAP UID search warning, falling back to unseen query: ' . $e->getMessage());
+                    $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
+                }
             } elseif ($onlyUnseen) {
                 $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
             } else {

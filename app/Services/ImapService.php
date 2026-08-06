@@ -170,6 +170,19 @@ class ImapService
 
             if ($maxUid > $lastUid) {
                 $this->setLastProcessedUid($maxUid);
+            } elseif ($lastUid === 0) {
+                try {
+                    $latestMsg = $folder->query()->all()->setFetchOrder('desc')->limit(1)->get()->first();
+                    if ($latestMsg) {
+                        $latestUid = (int) $latestMsg->getUid();
+                        if ($latestUid > 0) {
+                            $this->setLastProcessedUid($latestUid);
+                            $maxUid = $latestUid;
+                        }
+                    }
+                } catch (\Throwable $uidInitEx) {
+                    // Ignore initialization error
+                }
             }
 
             Log::info("IMAP email fetch process completed. Processed/queued {$count} emails. New last_uid: {$maxUid}");

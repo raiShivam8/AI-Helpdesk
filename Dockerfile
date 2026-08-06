@@ -104,6 +104,13 @@ RUN { \
     } > /usr/local/etc/php/conf.d/opcache.ini
 
 
+# Redirect PHP-FPM logs to stdout to prevent Railway from highlighting NOTICE messages as errors
+RUN { \
+    echo '[global]'; \
+    echo 'error_log = /proc/self/fd/1'; \
+    } > /usr/local/etc/php-fpm.d/zz-log.conf
+
+
 
 WORKDIR /var/www/html
 

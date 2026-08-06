@@ -57,7 +57,7 @@ echo "⏰ Starting Scheduler..."
 php artisan schedule:work &
 
 echo "🌟 Starting PHP-FPM..."
-php-fpm -D
+php-fpm -D 2>&1
 
 echo "⏳ Waiting for PHP-FPM socket on port 9000..."
 while ! nc -z 127.0.0.1 9000; do

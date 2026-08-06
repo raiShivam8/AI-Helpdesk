@@ -40,8 +40,4 @@ Route::post('/api/webhooks/inbound-email', [\App\Http\Controllers\InboundEmailWe
     ->middleware(\App\Http\Middleware\VerifyWebhookSecret::class)
     ->name('webhooks.inbound-email');
 
-Route::post('/webhooks/postmark/inbound', [\App\Http\Controllers\PostmarkWebhookController::class, 'handle'])
-    ->name('webhooks.postmark.inbound');
-
-
 require __DIR__.'/auth.php';

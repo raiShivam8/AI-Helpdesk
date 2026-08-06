@@ -26,13 +26,14 @@ class AiAgentSeeder extends Seeder
      */
     public function run(): void
     {
-        User::firstOrCreate(
+        User::withTrashed()->updateOrCreate(
             ['email' => self::EMAIL],
             [
                 'name'              => 'AI',
                 'password'          => Hash::make(Str::random(64)),
                 'role'              => Role::Agent,
                 'email_verified_at' => now(),
+                'deleted_at'        => null,
             ]
         );
     }

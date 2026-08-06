@@ -13,11 +13,6 @@ return [
     */
 
 
-    'postmark' => [
-        'key' => env('POSTMARK_API_KEY'),
-        'webhook_secret' => env('POSTMARK_WEBHOOK_SECRET', env('WEBHOOK_SECRET')),
-    ],
-
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

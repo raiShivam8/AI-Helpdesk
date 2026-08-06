@@ -21,36 +21,39 @@ class DatabaseSeeder extends Seeder
         $adminPassword = config('app.admin_password');
 
         if ($adminEmail && $adminPassword) {
-            User::updateOrCreate(
+            User::withTrashed()->updateOrCreate(
                 ['email' => $adminEmail],
                 [
                     'name' => 'Admin',
                     'password' => Hash::make($adminPassword),
                     'role' => Role::Admin,
                     'email_verified_at' => now(),
+                    'deleted_at' => null,
                 ]
             );
         }
 
-        // Keep a default test user/agent if needed, using firstOrCreate
-        User::firstOrCreate(
+        // Default test user/agent
+        User::withTrashed()->updateOrCreate(
             ['email' => 'test@example.com'],
             [
                 'name' => 'Test User',
                 'password' => Hash::make('password'),
                 'role' => Role::Agent,
                 'email_verified_at' => now(),
+                'deleted_at' => null,
             ]
         );
 
-        // Add the requested default Agent user
-        User::firstOrCreate(
+        // Default Agent user
+        User::withTrashed()->updateOrCreate(
             ['email' => 'agent@gmail.com'],
             [
                 'name' => 'Agent',
                 'password' => Hash::make('password123'),
                 'role' => Role::Agent,
                 'email_verified_at' => now(),
+                'deleted_at' => null,
             ]
         );
 

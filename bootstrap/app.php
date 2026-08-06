@@ -20,8 +20,6 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'api/webhooks/inbound-email',
-            'webhooks/sendgrid/inbound',
-            'webhooks/postmark/inbound',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

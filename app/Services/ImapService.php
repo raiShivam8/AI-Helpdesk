@@ -74,12 +74,30 @@ class ImapService
             $folder = $client->getFolder('INBOX');
 
             /** @var \Webklex\PHPIMAP\Support\MessageCollection $messages */
+            $messages = [];
             if ($lastUid > 0) {
                 try {
-                    // Optimized UID-based query: fetch only messages with UID >= (lastUid + 1)
-                    $messages = $folder->query()->where("CUSTOM UID " . ($lastUid + 1) . ":*")->setFetchOrder('asc')->limit($limit)->get();
+                    // Ultra-fast ID query: check UIDs first without downloading message bodies
+                    $uidList = $folder->query()->where("CUSTOM UID " . ($lastUid + 1) . ":*")->pluck('uid')->toArray();
+                    $newUids = array_filter(array_map('intval', (array) $uidList), fn($u) => $u > $lastUid);
+
+                    if (empty($newUids)) {
+                        // Zero new emails exist — finish instantly in < 0.1s
+                        $execTimeMs = round((microtime(true) - $startTime) * 1000, 2);
+                        Log::info("IMAP fetch completed (0 new emails): {$execTimeMs}ms, lastUid: {$lastUid}");
+                        return [
+                            'count'             => 0,
+                            'last_uid'          => $lastUid,
+                            'execution_ms'      => $execTimeMs,
+                            'new_tickets_count' => 0,
+                        ];
+                    }
+
+                    // Fetch ONLY the newly arrived message UIDs
+                    $targetUids = array_slice(array_values($newUids), 0, $limit);
+                    $messages   = $folder->query()->whereIn('UID', $targetUids)->setFetchOrder('asc')->get();
                 } catch (\Throwable $e) {
-                    Log::warning('IMAP UID search warning, falling back to unseen query: ' . $e->getMessage());
+                    Log::warning('IMAP fast UID search warning, falling back to unseen query: ' . $e->getMessage());
                     $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
                 }
             } elseif ($onlyUnseen) {

@@ -19,8 +19,25 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->environment('production') || str_starts_with((string) config('app.url'), 'https://') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+        if (!$this->app->runningInConsole()) {
+            try {
+                $requestHost = request()->getHost();
+                $isHttps = $this->app->environment('production')
+                    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                    || request()->isSecure()
+                    || str_starts_with((string) config('app.url'), 'https://');
+
+                if ($isHttps) {
+                    \Illuminate\Support\Facades\URL::forceScheme('https');
+                }
+
+                if (!empty($requestHost) && !in_array($requestHost, ['127.0.0.1', 'localhost'], true)) {
+                    $scheme = $isHttps ? 'https' : 'http';
+                    \Illuminate\Support\Facades\URL::forceRootUrl("{$scheme}://{$requestHost}");
+                }
+            } catch (\Throwable $e) {
+                // Ignore URL binding exception in CLI/early boot
+            }
         }
 
         if ($this->app->runningInConsole()) {

@@ -10,7 +10,7 @@ class InboundEmailValidationService
      * Determine whether an inbound email represents a customer request.
      *
      * Rules:
-     * - Ignore ONLY emails sent from our support email (kundanrai8102002@gmail.com).
+     * - Ignore ONLY emails sent from our support email (srai80147@gmail.com).
      * - Accept all other emails from customers.
      *
      * @param array $parsedData Array containing sender_email, sender_name, subject, body, etc.
@@ -32,7 +32,7 @@ class InboundEmailValidationService
             env('IMAP_USERNAME'),
             config('mail.support_email'),
             env('SUPPORT_EMAIL'),
-            'kundanrai8102002@gmail.com',
+            'srai80147@gmail.com',
         ]));
 
         if (in_array($senderEmail, array_unique($supportEmails), true)) {

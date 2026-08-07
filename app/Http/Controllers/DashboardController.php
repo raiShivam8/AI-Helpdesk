@@ -46,11 +46,11 @@ class DashboardController extends Controller
             $avgResolutionHours = '0 hrs';
         }
 
-        // ── Chart data: tickets created per day for last 30 days ──────────────
+        // ── Chart data: tickets created per day for last 14 days ──────────────
 
-        // Generate a complete series of the last 30 days (including gaps with 0)
+        // Generate a complete series of the last 14 days (including gaps with 0)
         $today = now()->startOfDay();
-        $start = now()->subDays(29)->startOfDay();
+        $start = now()->subDays(13)->startOfDay();
 
         // Fetch actual counts from DB grouped by date
         $rawCounts = Ticket::whereBetween('created_at', [$start, $today->copy()->endOfDay()])
@@ -60,11 +60,11 @@ class DashboardController extends Controller
             ->pluck('total', 'ticket_date')
             ->toArray();
 
-        // Build a zero-filled 30-day series
+        // Build a zero-filled 14-day series
         $chartLabels = [];
         $chartData   = [];
 
-        for ($i = 29; $i >= 0; $i--) {
+        for ($i = 13; $i >= 0; $i--) {
             $date           = now()->subDays($i)->format('Y-m-d');
             $chartLabels[]  = now()->subDays($i)->format('M j');
             $chartData[]    = (int) ($rawCounts[$date] ?? 0);

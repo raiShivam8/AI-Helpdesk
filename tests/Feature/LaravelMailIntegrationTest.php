@@ -88,11 +88,12 @@ class LaravelMailIntegrationTest extends TestCase
         Mail::fake();
 
         $ticket = Ticket::factory()->create([
-            'sender_name'  => 'Sarah Connor',
-            'sender_email' => 'sarah@example.com',
-            'subject'      => 'Course access instructions',
-            'body'         => 'How do I access the course videos after purchase?',
-            'status'       => TicketStatus::Open,
+            'sender_name'    => 'Sarah Connor',
+            'sender_email'   => 'sarah@example.com',
+            'subject'        => 'Course access instructions',
+            'body'           => 'How do I access the course videos after purchase?',
+            'status'         => TicketStatus::Open,
+            'ai_resolved_at' => null,
         ]);
 
         // Mock GeminiService

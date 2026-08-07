@@ -204,7 +204,8 @@ class TicketAutoResolveTest extends TestCase
     public function test_auto_resolve_job_catches_exception_and_falls_back_to_open(): void
     {
         $ticket = Ticket::factory()->create([
-            'status' => TicketStatus::New,
+            'status'         => TicketStatus::New,
+            'ai_resolved_at' => null,
         ]);
 
         $this->mock(GeminiService::class, function ($mock) {

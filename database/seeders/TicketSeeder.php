@@ -12,6 +12,6 @@ class TicketSeeder extends Seeder
      */
     public function run(): void
     {
-        Ticket::factory()->count(110)->create();
+        // Demo tickets removed - real tickets are created exclusively via IMAP ingestion
     }
 }

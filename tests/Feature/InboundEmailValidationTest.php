@@ -19,7 +19,7 @@ class InboundEmailValidationTest extends TestCase
     {
         $validator = new InboundEmailValidationService();
 
-        $supportEmail = config('mail.support_email', 'srai80147@gmail.com');
+        $supportEmail = config('mail.support_email', 'kundanrai8102002@gmail.com');
 
         $result = $validator->validateInboundEmail([
             'sender_email' => $supportEmail,
@@ -63,7 +63,7 @@ class InboundEmailValidationTest extends TestCase
 
         // 2. Create invalid ticket from support email
         $invalidTicket1 = Ticket::factory()->create([
-            'sender_email' => config('mail.support_email', 'srai80147@gmail.com'),
+            'sender_email' => config('mail.support_email', 'kundanrai8102002@gmail.com'),
             'subject'      => 'Re: Support inquiry',
         ]);
 

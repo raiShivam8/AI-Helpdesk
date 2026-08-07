@@ -272,4 +272,17 @@ class TicketController extends Controller
         return redirect()->route('tickets.show', $ticket)
             ->with('info', 'AI evaluated the ticket against knowledge-base.md, but the query requires human agent review.');
     }
+
+    /**
+     * Remove the specified ticket permanently from storage.
+     */
+    public function destroy(Ticket $ticket): RedirectResponse
+    {
+        $ticketId = $ticket->id;
+        $ticket->replies()->delete();
+        $ticket->delete();
+
+        return redirect()->route('tickets.index')
+            ->with('success', "Ticket #{$ticketId} has been permanently deleted.");
+    }
 }

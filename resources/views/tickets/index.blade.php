@@ -211,6 +211,7 @@
                             <x-sortable-header column="status"      title="Status"          :current-sort="$sort" :current-direction="$direction" align="center" />
                             <th class="py-3.5 px-5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned Agent</th>
                             <x-sortable-header column="created_at"  title="Created"         :current-sort="$sort" :current-direction="$direction" align="right" />
+                            <th class="py-3.5 px-5 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -305,6 +306,19 @@
                                 <span class="text-xs text-slate-500 font-medium" title="{{ $ticket->created_at->format('Y-m-d H:i:s') }}">
                                     {{ $ticket->created_at->diffForHumans() }}
                                 </span>
+                            </td>
+
+                            {{-- Actions --}}
+                            <td class="text-center whitespace-nowrap">
+                                <form method="POST" action="{{ route('tickets.destroy', $ticket) }}" onsubmit="return confirm('Are you sure you want to permanently delete Ticket #{{ $ticket->id }}?');" class="inline-block">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Delete Ticket #{{ $ticket->id }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </form>
                             </td>
                         </tr>
                         @endforeach

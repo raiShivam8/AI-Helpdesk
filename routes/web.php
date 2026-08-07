@@ -20,6 +20,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets/sync-emails', \App\Http\Controllers\SyncEmailsController::class)->name('tickets.sync-emails');
     Route::get('/tickets/{ticket}', [\App\Http\Controllers\TicketController::class, 'show'])->name('tickets.show');
     Route::patch('/tickets/{ticket}', [\App\Http\Controllers\TicketController::class, 'update'])->name('tickets.update');
+    Route::delete('/tickets/{ticket}', [\App\Http\Controllers\TicketController::class, 'destroy'])->name('tickets.destroy');
     Route::patch('/tickets/{ticket}/assign', [\App\Http\Controllers\TicketController::class, 'assign'])->name('tickets.assign');
 
     // Ticket Replies – nested under a ticket (POST only; replies are immutable)

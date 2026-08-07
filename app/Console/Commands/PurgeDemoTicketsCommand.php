@@ -35,6 +35,7 @@ class PurgeDemoTicketsCommand extends Command
               ->orWhere('sender_email', 'like', '%@example.org')
               ->orWhere('sender_email', 'like', '%@example.net')
               ->orWhere('sender_email', 'test@example.com')
+              ->orWhere('sender_email', 'kundanrai8102002@gmail.com')
               ->orWhere('subject', 'like', 'Inquiry about course enrollment%')
               ->orWhere('subject', 'like', 'Database connection timeout%')
               ->orWhere('subject', 'like', 'Refund request for duplicate%')

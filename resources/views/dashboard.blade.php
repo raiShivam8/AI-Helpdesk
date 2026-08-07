@@ -83,31 +83,56 @@
             <div>
                 <p class="text-2xl font-bold text-slate-900 dark:text-white leading-none">{{ $aiResolutionPct }}</p>
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">AI Resolution %</p>
+            </div    {{-- ═══ Industrial Chart: Responsive Analytics ═══ --}}
+    <div class="card p-6 mb-8 bg-white/90 dark:bg-[#161B27]/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-sm rounded-2xl">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 ring-1 ring-indigo-200 dark:ring-indigo-800/50">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 id="chartTitleText" class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Ticket Analytics</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50">Live</span>
+                    </h2>
+                    <p id="chartSubTitleText" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">30 days activity overview</p>
+                </div>
             </div>
-        </div>
 
-    </div>
-
-    {{-- ═══ Industrial Chart: Responsive Analytics (Bar / Category Donut / Status Donut) ═══ --}}
-    <div class="card p-5 mb-8">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-                <h2 id="chartTitleText" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Ticket Analytics</h2>
-                <p id="chartSubTitleText" class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">30 days activity overview</p>
+            {{-- Summary Stats Pills --}}
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+                <div class="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    <span class="text-slate-500 dark:text-slate-400">Total Volume:</span>
+                    <span class="font-bold text-slate-900 dark:text-white">{{ number_format(array_sum($chartData)) }}</span>
+                </div>
+                <div class="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="text-slate-500 dark:text-slate-400">Peak/Day:</span>
+                    <span class="font-bold text-slate-900 dark:text-white">{{ max($chartData) }}</span>
+                </div>
             </div>
-            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl ring-1 ring-slate-200 dark:ring-slate-700/60 self-start sm:self-auto">
-                <button type="button" id="btnChartBar" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs">
+
+            {{-- View Selector Buttons --}}
+            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl ring-1 ring-slate-200 dark:ring-slate-700/60 self-start md:self-auto shrink-0">
+                <button type="button" id="btnChartBar" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs">
                     Daily Bar
                 </button>
-                <button type="button" id="btnChartCategory" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+                <button type="button" id="btnChartTrend" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+                    Trend Area
+                </button>
+                <button type="button" id="btnChartCategory" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
                     Category Donut
                 </button>
-                <button type="button" id="btnChartStatus" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+                <button type="button" id="btnChartStatus" class="px-3 py-1.5 text-xs font-bold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
                     Status Donut
                 </button>
             </div>
         </div>
-        <div class="relative h-64 sm:h-60 flex items-center justify-center">
+
+        <div class="relative h-72 sm:h-64 flex items-center justify-center">
             <canvas id="ticketsBarChart"></canvas>
         </div>
     </div>
@@ -240,7 +265,7 @@
                    class="flex items-center gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-150 group">
                     <div class="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/60 transition-colors">
                         <svg class="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012 2h2a2 2 0 012-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
                     </div>
                     <div>
@@ -319,8 +344,8 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                const ctx = document.getElementById('ticketsBarChart');
-                if (!ctx) return;
+                const ctxCanvas = document.getElementById('ticketsBarChart');
+                if (!ctxCanvas) return;
 
                 const dailyLabels    = @json($chartLabels);
                 const dailyData      = @json($chartData);
@@ -332,10 +357,10 @@
                 const chartTitleEl    = document.getElementById('chartTitleText');
                 const chartSubTitleEl = document.getElementById('chartSubTitleText');
                 const btnBar          = document.getElementById('btnChartBar');
+                const btnTrend        = document.getElementById('btnChartTrend');
                 const btnCategory     = document.getElementById('btnChartCategory');
                 const btnStatus       = document.getElementById('btnChartStatus');
 
-                // Industrial Dark/Light Palette
                 const industrialColors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#06b6d4', '#14b8a6'];
 
                 function isDark() {
@@ -349,21 +374,18 @@
                 function getThemeColors() {
                     const dark = isDark();
                     return {
-                        barBg      : dark ? 'rgba(99, 102, 241, 0.70)' : 'rgba(99, 102, 241, 0.85)',
-                        barBorder  : dark ? '#818cf8'                   : '#4f46e5',
-                        tickColor  : dark ? '#94a3b8'                   : '#64748b',
-                        gridColor  : dark ? 'rgba(255,255,255,0.06)'    : '#f1f5f9',
-                        tooltipBg  : dark ? '#1e293b'                   : '#ffffff',
-                        tooltipText: dark ? '#f1f5f9'                   : '#0f172a',
-                        tooltipBdr : dark ? '#334155'                   : '#e2e8f0',
-                        ringBorder : dark ? '#1e293b'                   : '#ffffff',
+                        tickColor  : dark ? '#94a3b8'                : '#64748b',
+                        gridColor  : dark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+                        tooltipBg  : dark ? '#1e293b'                : '#ffffff',
+                        tooltipText: dark ? '#f1f5f9'                : '#0f172a',
+                        tooltipBdr : dark ? '#334155'                : '#e2e8f0',
+                        ringBorder : dark ? '#161B27'                : '#ffffff',
                     };
                 }
 
                 let currentView = isMobile() ? 'category' : 'bar';
                 let chartInstance = null;
 
-                // Industrial Plugin: Draw total ticket count inside Doughnut hole
                 const centerTextPlugin = {
                     id: 'centerText',
                     beforeDraw(chart) {
@@ -398,7 +420,7 @@
                     const activeCls   = ['bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-xs'];
                     const inactiveCls = ['text-slate-500', 'hover:text-slate-900', 'dark:text-slate-400', 'dark:hover:text-white'];
 
-                    [btnBar, btnCategory, btnStatus].forEach(btn => {
+                    [btnBar, btnTrend, btnCategory, btnStatus].forEach(btn => {
                         if (btn) btn.classList.remove(...activeCls);
                         if (btn) btn.classList.add(...inactiveCls);
                     });
@@ -406,6 +428,9 @@
                     if (currentView === 'bar' && btnBar) {
                         btnBar.classList.remove(...inactiveCls);
                         btnBar.classList.add(...activeCls);
+                    } else if (currentView === 'trend' && btnTrend) {
+                        btnTrend.classList.remove(...inactiveCls);
+                        btnTrend.classList.add(...activeCls);
                     } else if (currentView === 'category' && btnCategory) {
                         btnCategory.classList.remove(...inactiveCls);
                         btnCategory.classList.add(...activeCls);
@@ -423,64 +448,105 @@
                     const c = getThemeColors();
                     updateTabUI();
 
+                    const canvasCtx = ctxCanvas.getContext('2d');
                     let type = 'bar';
                     let labels = [];
-                    let data = [];
-                    let bgColors = c.barBg;
-                    let borderColors = c.barBorder;
+                    let datasetConfig = {};
+
+                    // Canvas Vertical Gradients
+                    const barGrad = canvasCtx.createLinearGradient(0, 0, 0, 260);
+                    barGrad.addColorStop(0, 'rgba(99, 102, 241, 0.95)');
+                    barGrad.addColorStop(0.6, 'rgba(124, 58, 237, 0.70)');
+                    barGrad.addColorStop(1, 'rgba(79, 70, 229, 0.25)');
+
+                    const lineGrad = canvasCtx.createLinearGradient(0, 0, 0, 260);
+                    lineGrad.addColorStop(0, 'rgba(99, 102, 241, 0.45)');
+                    lineGrad.addColorStop(0.8, 'rgba(124, 58, 237, 0.08)');
+                    lineGrad.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
 
                     if (currentView === 'bar') {
                         type = 'bar';
                         labels = dailyLabels;
-                        data = dailyData;
-                        if (chartTitleEl) chartTitleEl.textContent = 'Tickets Created (Daily)';
-                        if (chartSubTitleEl) chartSubTitleEl.textContent = 'Last 30 days daily overview';
+                        datasetConfig = {
+                            label: 'Tickets Created',
+                            data: dailyData,
+                            backgroundColor: barGrad,
+                            borderColor: '#6366f1',
+                            borderWidth: 1,
+                            borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+                            borderSkipped: false,
+                            hoverBackgroundColor: 'rgba(129, 140, 248, 1)',
+                        };
+                        if (chartTitleEl) chartTitleEl.innerHTML = '<span>Tickets Created (Daily)</span>';
+                        if (chartSubTitleEl) chartSubTitleEl.textContent = '30 days ticket creation activity';
+                    } else if (currentView === 'trend') {
+                        type = 'line';
+                        labels = dailyLabels;
+                        datasetConfig = {
+                            label: 'Ticket Trend',
+                            data: dailyData,
+                            fill: true,
+                            tension: 0.4,
+                            backgroundColor: lineGrad,
+                            borderColor: '#6366f1',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#818cf8',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 7,
+                            pointHoverBackgroundColor: '#6366f1',
+                        };
+                        if (chartTitleEl) chartTitleEl.innerHTML = '<span>Ticket Volume Trend (Area Curve)</span>';
+                        if (chartSubTitleEl) chartSubTitleEl.textContent = 'Smooth 30-day activity curve';
                     } else if (currentView === 'category') {
                         type = 'doughnut';
                         labels = categoryLabels;
-                        data = categoryData;
-                        bgColors = industrialColors.slice(0, labels.length);
-                        borderColors = c.ringBorder;
-                        if (chartTitleEl) chartTitleEl.textContent = 'Category Distribution (Industrial Donut)';
+                        datasetConfig = {
+                            label: 'Category',
+                            data: categoryData,
+                            backgroundColor: industrialColors.slice(0, labels.length),
+                            borderColor: c.ringBorder,
+                            borderWidth: 3,
+                            hoverOffset: 8,
+                        };
+                        if (chartTitleEl) chartTitleEl.innerHTML = '<span>Category Distribution</span>';
                         if (chartSubTitleEl) chartSubTitleEl.textContent = 'Breakdown by ticket category';
                     } else if (currentView === 'status') {
                         type = 'doughnut';
                         labels = statusLabels;
-                        data = statusData;
-                        bgColors = ['#3b82f6', '#8b5cf6', '#10b981', '#64748b'].slice(0, labels.length);
-                        borderColors = c.ringBorder;
-                        if (chartTitleEl) chartTitleEl.textContent = 'Status Breakdown (Industrial Donut)';
+                        datasetConfig = {
+                            label: 'Status',
+                            data: statusData,
+                            backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#64748b'].slice(0, labels.length),
+                            borderColor: c.ringBorder,
+                            borderWidth: 3,
+                            hoverOffset: 8,
+                        };
+                        if (chartTitleEl) chartTitleEl.innerHTML = '<span>Status Breakdown</span>';
                         if (chartSubTitleEl) chartSubTitleEl.textContent = 'Current status distribution';
                     }
 
-                    chartInstance = new Chart(ctx, {
+                    chartInstance = new Chart(ctxCanvas, {
                         type: type,
                         data: {
                             labels: labels,
-                            datasets: [{
-                                label: 'Tickets',
-                                data: data,
-                                backgroundColor: bgColors,
-                                borderColor: borderColors,
-                                borderWidth: type === 'doughnut' ? 3 : 1.5,
-                                borderRadius: type === 'bar' ? 5 : 0,
-                                hoverOffset: type === 'doughnut' ? 6 : 0,
-                            }]
+                            datasets: [datasetConfig]
                         },
                         plugins: [centerTextPlugin],
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            cutout: type === 'doughnut' ? '70%' : 0,
-                            animation: { duration: 350 },
+                            cutout: type === 'doughnut' ? '72%' : 0,
+                            animation: { duration: 400, easing: 'easeOutQuart' },
                             plugins: {
                                 legend: {
                                     display: type === 'doughnut',
                                     position: 'bottom',
                                     labels: {
                                         color: c.tickColor,
-                                        font: { size: 11, family: 'Inter, sans-serif' },
-                                        padding: 14,
+                                        font: { size: 11, family: 'Inter, sans-serif', weight: '500' },
+                                        padding: 16,
                                         boxWidth: 10,
                                         usePointStyle: true,
                                         pointStyle: 'circle',
@@ -502,8 +568,12 @@
                                     bodyColor: c.tooltipText,
                                     borderColor: c.tooltipBdr,
                                     borderWidth: 1,
-                                    padding: 10,
-                                    cornerRadius: 8,
+                                    padding: 12,
+                                    cornerRadius: 10,
+                                    shadowOffsetX: 0,
+                                    shadowOffsetY: 4,
+                                    shadowBlur: 12,
+                                    shadowColor: 'rgba(0,0,0,0.15)',
                                     callbacks: {
                                         label: function(context) {
                                             const val = context.raw || 0;
@@ -544,6 +614,7 @@
 
                 // Button event listeners
                 if (btnBar)      btnBar.addEventListener('click', () => { currentView = 'bar'; renderChart(); });
+                if (btnTrend)    btnTrend.addEventListener('click', () => { currentView = 'trend'; renderChart(); });
                 if (btnCategory) btnCategory.addEventListener('click', () => { currentView = 'category'; renderChart(); });
                 if (btnStatus)   btnStatus.addEventListener('click', () => { currentView = 'status'; renderChart(); });
 
@@ -553,7 +624,7 @@
                     clearTimeout(resizeTimer);
                     resizeTimer = setTimeout(function () {
                         const newIsMobile = isMobile();
-                        if (newIsMobile && currentView === 'bar') {
+                        if (newIsMobile && (currentView === 'bar' || currentView === 'trend')) {
                             currentView = 'category';
                             renderChart();
                         } else if (!newIsMobile && currentView === 'category') {
@@ -575,6 +646,5 @@
             });
         </script>
     @endpush
-
 
 </x-app-layout>

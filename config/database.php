@@ -86,12 +86,12 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => env('DB_URL', env('DATABASE_URL')),
-            'host' => (is_string(env('DB_HOST')) && str_starts_with(env('DB_HOST'), '${')) ? '127.0.0.1' : env('DB_HOST', '127.0.0.1'),
-            'port' => (is_string(env('DB_PORT')) && is_numeric(env('DB_PORT'))) ? env('DB_PORT') : ((is_string(env('DB_PORT')) && str_starts_with(env('DB_PORT'), '${')) ? '5432' : env('DB_PORT', '5432')),
-            'database' => (is_string(env('DB_DATABASE')) && str_starts_with(env('DB_DATABASE'), '${')) ? 'helpdesk' : env('DB_DATABASE', 'helpdesk'),
-            'username' => (is_string(env('DB_USERNAME')) && str_starts_with(env('DB_USERNAME'), '${')) ? 'postgres' : env('DB_USERNAME', 'postgres'),
-            'password' => (is_string(env('DB_PASSWORD')) && str_starts_with(env('DB_PASSWORD'), '${')) ? '' : env('DB_PASSWORD', ''),
+            'url' => (is_string(env('DB_URL')) && !str_starts_with(env('DB_URL'), '${')) ? env('DB_URL') : ((is_string(env('DATABASE_URL')) && !str_starts_with(env('DATABASE_URL'), '${')) ? env('DATABASE_URL') : null),
+            'host' => (is_string(env('DB_HOST')) && !str_starts_with(env('DB_HOST'), '${')) ? env('DB_HOST') : '127.0.0.1',
+            'port' => (is_string(env('DB_PORT')) && is_numeric(env('DB_PORT'))) ? env('DB_PORT') : '5432',
+            'database' => (is_string(env('DB_DATABASE')) && !str_starts_with(env('DB_DATABASE'), '${')) ? env('DB_DATABASE') : 'helpdesk',
+            'username' => (is_string(env('DB_USERNAME')) && !str_starts_with(env('DB_USERNAME'), '${')) ? env('DB_USERNAME') : 'postgres',
+            'password' => (is_string(env('DB_PASSWORD')) && !str_starts_with(env('DB_PASSWORD'), '${')) ? env('DB_PASSWORD') : '',
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,

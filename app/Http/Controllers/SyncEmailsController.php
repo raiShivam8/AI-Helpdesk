@@ -18,9 +18,13 @@ class SyncEmailsController extends Controller
 
         try {
             $includeSeen = filter_var($request->input('all'), FILTER_VALIDATE_BOOLEAN);
-            
-            // Single fast fetch call (< 1.5s execution speed)
-            $count = $imapService->fetchUnreadEmails(null, !$includeSeen, 5);
+
+            if ($request->has('reset')) {
+                $imapService->resetLastProcessedUid();
+            }
+
+            // Interactive web sync: pass syncJobs = true so tickets populate immediately on dashboard
+            $count = $imapService->fetchUnreadEmails(null, !$includeSeen, 20, true);
 
             if ($count > 0) {
                 return redirect()->back()->with('success', "Successfully synced emails! Imported {$count} new customer ticket(s).");

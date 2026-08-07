@@ -35,6 +35,9 @@ echo "🔗 Creating storage link..."
 php artisan storage:link --force || true
 
 echo "⚡ Caching Laravel config..."
+if [ ! -f "/var/www/html/public/build/manifest.json" ]; then
+    echo "⚠️ Warning: public/build/manifest.json is missing! Vite assets might be missing."
+fi
 php artisan package:discover --ansi || true
 php artisan config:cache || true
 php artisan route:cache || true

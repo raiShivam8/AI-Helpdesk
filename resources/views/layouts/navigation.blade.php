@@ -85,6 +85,7 @@
     </div>
 
     {{-- ── User Footer ── --}}
+    @auth
     <div class="shrink-0 p-3" style="border-top: 1px solid var(--border-default);">
         <x-dropdown align="top-right" width="48">
             <x-slot name="trigger">
@@ -94,11 +95,11 @@
                         onmouseout="this.style.backgroundColor='transparent'">
                     {{-- Avatar --}}
                     <div class="avatar avatar-md gradient-brand text-white shrink-0">
-                        {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                        {{ strtoupper(substr(Auth::user()?->name ?? 'U', 0, 1)) }}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <div class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ Auth::user()->name }}</div>
-                        <div class="text-xs truncate" style="color: var(--text-muted);">{{ Auth::user()->email }}</div>
+                        <div class="text-sm font-semibold truncate" style="color: var(--text-primary);">{{ Auth::user()?->name }}</div>
+                        <div class="text-xs truncate" style="color: var(--text-muted);">{{ Auth::user()?->email }}</div>
                     </div>
                     <svg class="w-4 h-4 shrink-0 transition-colors" style="color: var(--text-muted);" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
@@ -127,4 +128,5 @@
             </x-slot>
         </x-dropdown>
     </div>
+    @endauth
 </aside>

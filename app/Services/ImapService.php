@@ -50,7 +50,7 @@ class ImapService
      * @param ImapClient|null $client Optional client instance for dependency injection / testing
      * @return int Number of processed/queued emails
      */
-    public function fetchUnreadEmails(?ImapClient $client = null, bool $onlyUnseen = true, int $limit = 20): int
+    public function fetchUnreadEmails(?ImapClient $client = null, bool $onlyUnseen = true, int $limit = 20, bool $syncJobs = false): int
     {
         @set_time_limit(180);
         @ini_set('max_execution_time', '180');
@@ -168,8 +168,12 @@ class ImapService
                         continue;
                     }
 
-                    // 3. Dispatch ProcessInboundEmailJob to background queue
-                    ProcessInboundEmailJob::dispatch($parsed);
+                    // 3. Dispatch ProcessInboundEmailJob
+                    if ($syncJobs) {
+                        ProcessInboundEmailJob::dispatchSync($parsed);
+                    } else {
+                        ProcessInboundEmailJob::dispatch($parsed);
+                    }
                     $message->setFlag('Seen');
 
                     if ($uid > $maxUid) {

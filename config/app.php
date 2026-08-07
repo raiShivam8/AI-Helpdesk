@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'https://ai-helpdesk-production-3013.up.railway.app'),
 
+    'asset_url' => env('ASSET_URL', '/'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

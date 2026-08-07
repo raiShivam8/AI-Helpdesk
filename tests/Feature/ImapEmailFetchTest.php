@@ -433,4 +433,35 @@ class ImapEmailFetchTest extends TestCase
             return $j->ticket->id === $ticket->id;
         });
     }
+
+    /**
+     * Test ImapService strips embedded CSS and <style> tags from rich HTML emails.
+     */
+    public function test_imap_service_strips_embedded_css_and_style_tags_from_html_emails(): void
+    {
+        $imapService = app(ImapService::class);
+        $htmlWithCss = "
+            <html>
+            <head>
+                <style>
+                    :root { color-scheme: light only !important; }
+                    body { margin: 0 !important; background-color: #f0ede6 !important; }
+                    @media (prefers-color-scheme: dark) {
+                        .bg-white { background-color: #ffffff !important; }
+                    }
+                </style>
+            </head>
+            <body>
+                <p>He stopped paying. Started building</p>
+            </body>
+            </html>
+        ";
+
+        $cleaned = $imapService->cleanEmailBody($htmlWithCss);
+
+        $this->assertEquals("He stopped paying. Started building", $cleaned);
+        $this->assertStringNotContainsString('color-scheme', $cleaned);
+        $this->assertStringNotContainsString('background-color', $cleaned);
+    }
 }
+

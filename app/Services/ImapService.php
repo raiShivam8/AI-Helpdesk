@@ -346,11 +346,16 @@ class ImapService
         $body = '';
         try {
             if (method_exists($message, 'hasTextBody') && $message->hasTextBody()) {
-                $body = trim((string) $message->getTextBody());
-            } elseif (method_exists($message, 'hasHTMLBody') && $message->hasHTMLBody()) {
-                $body = trim(strip_tags((string) $message->getHTMLBody()));
-            } else {
-                $body = trim((string) ($message->getTextBody() ?? ''));
+                $body = $this->cleanEmailBody((string) $message->getTextBody());
+            }
+
+            if (empty($body) && method_exists($message, 'hasHTMLBody') && $message->hasHTMLBody()) {
+                $body = $this->cleanEmailBody((string) $message->getHTMLBody());
+            }
+
+            if (empty($body)) {
+                $rawFallback = (string) ($message->getTextBody() ?? '');
+                $body = $this->cleanEmailBody($rawFallback);
             }
         } catch (\Throwable $e) {
             $body = '(No content)';
@@ -409,4 +414,55 @@ class ImapService
     {
         return $this->createTicketAction->execute($parsedData);
     }
+
+    /**
+     * Clean raw HTML or text body by removing <style>, <script>, <head> tags & contents,
+     * stripping HTML tags, decoding entities, and eliminating residual CSS blocks.
+     */
+    public function cleanEmailBody(string $rawBody): string
+    {
+        if (empty(trim($rawBody))) {
+            return '';
+        }
+
+        // 1. Remove <style>...</style> blocks and their content completely
+        $cleaned = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $rawBody);
+
+        // 2. Remove <script>...</script> blocks and their content
+        $cleaned = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $cleaned);
+
+        // 3. Remove <head>...</head> blocks and their content
+        $cleaned = preg_replace('/<head\b[^>]*>.*?<\/head>/is', '', $cleaned);
+
+        // 4. Remove HTML comments <!-- ... -->
+        $cleaned = preg_replace('/<!--.*?-->/s', '', $cleaned);
+
+        // 5. Convert common block-level HTML breaks to line breaks before stripping tags
+        $cleaned = preg_replace('/<br\s*\/?>/i', "\n", $cleaned);
+        $cleaned = preg_replace('/<\/p>/i', "\n\n", $cleaned);
+        $cleaned = preg_replace('/<\/div>/i', "\n", $cleaned);
+        $cleaned = preg_replace('/<\/tr>/i', "\n", $cleaned);
+        $cleaned = preg_replace('/<\/li>/i', "\n", $cleaned);
+
+        // 6. Strip all remaining HTML tags
+        $cleaned = strip_tags($cleaned);
+
+        // 7. Decode HTML entities
+        $cleaned = html_entity_decode($cleaned, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // 8. Remove CSS @rules (like @media, @import, @keyframes) and their entire nested blocks
+        $cleaned = preg_replace('/@(?:media|supports|import|charset|keyframes)[^{]+\{(?:[^{}]*\{[^}]*\}|[^{}])*\}/i', '', $cleaned);
+
+        // 9. Remove residual single-line or multi-line CSS rules starting with common selectors
+        $cleaned = preg_replace('/(?:\r?\n|^)\s*(?::root|html|body|table|td|th|a|img|p|span|div|tr|ul|li|\.[a-z0-9_-]+|#[a-z0-9_-]+|\*)\b[^{]*\{[^}]*\}/i', '', $cleaned);
+
+        // 10. Remove orphaned braces left by nested queries or CSS blocks
+        $cleaned = preg_replace('/^\s*[\{\}]\s*$/m', '', $cleaned);
+
+        // 11. Normalize multiple newlines and trim whitespace
+        $cleaned = preg_replace("/\n\s*\n\s*\n+/", "\n\n", $cleaned);
+
+        return trim($cleaned);
+    }
 }
+

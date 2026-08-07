@@ -61,13 +61,19 @@ class CreateTicketFromInboundEmailAction
                 ]);
             }
 
+            $rawBody = !empty(trim($parsedData['body'] ?? '')) ? trim($parsedData['body']) : '(No content)';
+            $cleanedBody = app(\App\Services\ImapService::class)->cleanEmailBody($rawBody);
+            if (empty($cleanedBody)) {
+                $cleanedBody = '(No content)';
+            }
+
             // 2. Create the ticket record
             $ticket = Ticket::create([
                 'message_id'   => $parsedData['message_id'] ?? null,
                 'sender_email' => $senderEmail,
                 'sender_name'  => $senderName,
                 'subject'      => !empty(trim($parsedData['subject'] ?? '')) ? trim($parsedData['subject']) : '(No Subject)',
-                'body'         => !empty(trim($parsedData['body'] ?? '')) ? trim($parsedData['body']) : '(No content)',
+                'body'         => $cleanedBody,
                 'status'       => TicketStatus::New,
                 'created_at'   => $parsedData['received_date'] ?? now(),
             ]);

@@ -96,10 +96,7 @@
                 <p id="chartSubTitleText" class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">30 days activity overview</p>
             </div>
             <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl ring-1 ring-slate-200 dark:ring-slate-700/60 self-start sm:self-auto">
-                <button type="button" id="btnChartBar" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs">
-                    Daily Bar
-                </button>
-                <button type="button" id="btnChartCategory" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+                <button type="button" id="btnChartCategory" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs">
                     Category Donut
                 </button>
                 <button type="button" id="btnChartStatus" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
@@ -331,7 +328,6 @@
 
                 const chartTitleEl    = document.getElementById('chartTitleText');
                 const chartSubTitleEl = document.getElementById('chartSubTitleText');
-                const btnBar          = document.getElementById('btnChartBar');
                 const btnCategory     = document.getElementById('btnChartCategory');
                 const btnStatus       = document.getElementById('btnChartStatus');
 
@@ -342,25 +338,19 @@
                     return document.documentElement.classList.contains('dark');
                 }
 
-                function isMobile() {
-                    return window.innerWidth < 640;
-                }
-
                 function getThemeColors() {
                     const dark = isDark();
                     return {
-                        barBg      : dark ? 'rgba(99, 102, 241, 0.70)' : 'rgba(99, 102, 241, 0.85)',
-                        barBorder  : dark ? '#818cf8'                   : '#4f46e5',
-                        tickColor  : dark ? '#94a3b8'                   : '#64748b',
-                        gridColor  : dark ? 'rgba(255,255,255,0.06)'    : '#f1f5f9',
-                        tooltipBg  : dark ? '#1e293b'                   : '#ffffff',
-                        tooltipText: dark ? '#f1f5f9'                   : '#0f172a',
-                        tooltipBdr : dark ? '#334155'                   : '#e2e8f0',
-                        ringBorder : dark ? '#1e293b'                   : '#ffffff',
+                        tickColor  : dark ? '#94a3b8'                : '#64748b',
+                        gridColor  : dark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+                        tooltipBg  : dark ? '#1e293b'                : '#ffffff',
+                        tooltipText: dark ? '#f1f5f9'                : '#0f172a',
+                        tooltipBdr : dark ? '#334155'                : '#e2e8f0',
+                        ringBorder : dark ? '#1e293b'                : '#ffffff',
                     };
                 }
 
-                let currentView = isMobile() ? 'category' : 'bar';
+                let currentView = 'category';
                 let chartInstance = null;
 
                 // Industrial Plugin: Draw total ticket count inside Doughnut hole
@@ -398,15 +388,12 @@
                     const activeCls   = ['bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-xs'];
                     const inactiveCls = ['text-slate-500', 'hover:text-slate-900', 'dark:text-slate-400', 'dark:hover:text-white'];
 
-                    [btnBar, btnCategory, btnStatus].forEach(btn => {
+                    [btnCategory, btnStatus].forEach(btn => {
                         if (btn) btn.classList.remove(...activeCls);
                         if (btn) btn.classList.add(...inactiveCls);
                     });
 
-                    if (currentView === 'bar' && btnBar) {
-                        btnBar.classList.remove(...inactiveCls);
-                        btnBar.classList.add(...activeCls);
-                    } else if (currentView === 'category' && btnCategory) {
+                    if (currentView === 'category' && btnCategory) {
                         btnCategory.classList.remove(...inactiveCls);
                         btnCategory.classList.add(...activeCls);
                     } else if (currentView === 'status' && btnStatus) {
@@ -423,25 +410,19 @@
                     const c = getThemeColors();
                     updateTabUI();
 
-                    let type = 'bar';
+                    let type = 'doughnut';
                     let labels = [];
                     let data = [];
-                    let bgColors = c.barBg;
-                    let borderColors = c.barBorder;
+                    let bgColors = [];
+                    let borderColors = c.ringBorder;
 
-                    if (currentView === 'bar') {
-                        type = 'bar';
-                        labels = dailyLabels;
-                        data = dailyData;
-                        if (chartTitleEl) chartTitleEl.textContent = 'Tickets Created (Daily)';
-                        if (chartSubTitleEl) chartSubTitleEl.textContent = 'Last 14 days daily overview';
-                    } else if (currentView === 'category') {
+                    if (currentView === 'category') {
                         type = 'doughnut';
                         labels = categoryLabels;
                         data = categoryData;
                         bgColors = industrialColors.slice(0, labels.length);
                         borderColors = c.ringBorder;
-                        if (chartTitleEl) chartTitleEl.textContent = 'Category Distribution (Industrial Donut)';
+                        if (chartTitleEl) chartTitleEl.textContent = 'Category Distribution';
                         if (chartSubTitleEl) chartSubTitleEl.textContent = 'Breakdown by ticket category';
                     } else if (currentView === 'status') {
                         type = 'doughnut';
@@ -449,12 +430,12 @@
                         data = statusData;
                         bgColors = ['#3b82f6', '#8b5cf6', '#10b981', '#64748b'].slice(0, labels.length);
                         borderColors = c.ringBorder;
-                        if (chartTitleEl) chartTitleEl.textContent = 'Status Breakdown (Industrial Donut)';
+                        if (chartTitleEl) chartTitleEl.textContent = 'Status Breakdown';
                         if (chartSubTitleEl) chartSubTitleEl.textContent = 'Current status distribution';
                     }
 
                     chartInstance = new Chart(ctx, {
-                        type: type,
+                        type: 'doughnut',
                         data: {
                             labels: labels,
                             datasets: [{
@@ -462,22 +443,19 @@
                                 data: data,
                                 backgroundColor: bgColors,
                                 borderColor: borderColors,
-                                borderWidth: type === 'doughnut' ? 3 : 1.5,
-                                borderRadius: type === 'bar' ? 6 : 0,
-                                borderSkipped: false,
-                                maxBarThickness: 32,
-                                hoverOffset: type === 'doughnut' ? 6 : 0,
+                                borderWidth: 3,
+                                hoverOffset: 6,
                             }]
                         },
                         plugins: [centerTextPlugin],
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            cutout: type === 'doughnut' ? '70%' : 0,
+                            cutout: '70%',
                             animation: { duration: 350 },
                             plugins: {
                                 legend: {
-                                    display: type === 'doughnut',
+                                    display: true,
                                     position: 'bottom',
                                     labels: {
                                         color: c.tickColor,
@@ -513,30 +491,6 @@
                                         }
                                     }
                                 }
-                            },
-                            scales: type === 'doughnut' ? {} : {
-                                x: {
-                                    grid: { display: false },
-                                    border: { display: false },
-                                    ticks: {
-                                        font: { size: 11, family: 'Inter, sans-serif' },
-                                        color: c.tickColor,
-                                        maxTicksLimit: 14,
-                                    }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    grace: '15%',
-                                    border: { display: false, dash: [4, 4] },
-                                    ticks: {
-                                        precision: 0,
-                                        font: { size: 11, family: 'Inter, sans-serif' },
-                                        color: c.tickColor,
-                                    },
-                                    grid: {
-                                        color: c.gridColor,
-                                    }
-                                }
                             }
                         }
                     });
@@ -546,25 +500,8 @@
                 renderChart();
 
                 // Button event listeners
-                if (btnBar)      btnBar.addEventListener('click', () => { currentView = 'bar'; renderChart(); });
                 if (btnCategory) btnCategory.addEventListener('click', () => { currentView = 'category'; renderChart(); });
                 if (btnStatus)   btnStatus.addEventListener('click', () => { currentView = 'status'; renderChart(); });
-
-                // Responsive auto-switch on screen resize
-                let resizeTimer;
-                window.addEventListener('resize', function () {
-                    clearTimeout(resizeTimer);
-                    resizeTimer = setTimeout(function () {
-                        const newIsMobile = isMobile();
-                        if (newIsMobile && currentView === 'bar') {
-                            currentView = 'category';
-                            renderChart();
-                        } else if (!newIsMobile && currentView === 'category') {
-                            currentView = 'bar';
-                            renderChart();
-                        }
-                    }, 150);
-                });
 
                 // Dark mode observer
                 const observer = new MutationObserver(function () {

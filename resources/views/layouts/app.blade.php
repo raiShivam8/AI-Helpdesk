@@ -24,8 +24,23 @@
             })();
         </script>
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <!-- Scripts & Styles (Relative Build Assets) -->
+        @php
+            $manifestPath = public_path('build/manifest.json');
+            $cssFile = '/build/assets/app.css';
+            $jsFile = '/build/assets/app.js';
+            if (file_exists($manifestPath)) {
+                $manifest = json_decode(file_get_contents($manifestPath), true);
+                if (isset($manifest['resources/css/app.css']['file'])) {
+                    $cssFile = '/build/' . $manifest['resources/css/app.css']['file'];
+                }
+                if (isset($manifest['resources/js/app.js']['file'])) {
+                    $jsFile = '/build/' . $manifest['resources/js/app.js']['file'];
+                }
+            }
+        @endphp
+        <link rel="stylesheet" href="{{ $cssFile }}">
+        <script type="module" src="{{ $jsFile }}"></script>
     </head>
     <body class="font-sans antialiased transition-colors duration-300"
           style="background-color: var(--bg-page); color: var(--text-primary);"

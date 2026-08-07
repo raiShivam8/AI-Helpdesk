@@ -13,8 +13,23 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" rel="stylesheet">
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <!-- Scripts & Styles (Relative Build Assets) -->
+        @php
+            $manifestPath = public_path('build/manifest.json');
+            $cssFile = '/build/assets/app.css';
+            $jsFile = '/build/assets/app.js';
+            if (file_exists($manifestPath)) {
+                $manifest = json_decode(file_get_contents($manifestPath), true);
+                if (isset($manifest['resources/css/app.css']['file'])) {
+                    $cssFile = '/build/' . $manifest['resources/css/app.css']['file'];
+                }
+                if (isset($manifest['resources/js/app.js']['file'])) {
+                    $jsFile = '/build/' . $manifest['resources/js/app.js']['file'];
+                }
+            }
+        @endphp
+        <link rel="stylesheet" href="{{ $cssFile }}">
+        <script type="module" src="{{ $jsFile }}"></script>
 
         <style>
             *, *::before, *::after { box-sizing: border-box; }

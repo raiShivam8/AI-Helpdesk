@@ -19,16 +19,31 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->environment('production') || str_starts_with((string) config('app.url'), 'https://') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
-        }
+        if (!$this->app->runningInConsole() && !$this->app->runningUnitTests()) {
+            try {
+                $host = request()->header('x-forwarded-host') ?? request()->header('host') ?? request()->getHost();
+                $host = explode(':', (string) $host)[0];
 
-        if (request()->hasHeader('x-forwarded-host')) {
-            $proxyHost = request()->header('x-forwarded-host');
-            if (!empty($proxyHost) && !in_array($proxyHost, ['127.0.0.1', 'localhost'], true)) {
-                $scheme = (request()->header('x-forwarded-proto') === 'https' || $this->app->environment('production')) ? 'https' : 'http';
-                \Illuminate\Support\Facades\URL::forceRootUrl("{$scheme}://{$proxyHost}");
+                if (!empty($host) && !in_array($host, ['127.0.0.1', 'localhost'], true)) {
+                    $isHttps = $this->app->environment('production')
+                        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                        || request()->header('x-forwarded-proto') === 'https'
+                        || request()->isSecure();
+
+                    $scheme = $isHttps ? 'https' : 'http';
+                    $currentUrl = "{$scheme}://{$host}";
+
+                    config(['app.url' => $currentUrl]);
+                    \Illuminate\Support\Facades\URL::forceRootUrl($currentUrl);
+                    if ($isHttps) {
+                        \Illuminate\Support\Facades\URL::forceScheme('https');
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Ignore URL binding exception
             }
+        } elseif ($this->app->environment('production') || str_starts_with((string) config('app.url'), 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
         }
 
         if ($this->app->runningInConsole()) {

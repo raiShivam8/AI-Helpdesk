@@ -19,7 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (!$this->app->runningInConsole()) {
+        if (!$this->app->runningInConsole() && !$this->app->runningUnitTests()) {
             try {
                 $requestHost = request()->getHost();
                 $isHttps = $this->app->environment('production')

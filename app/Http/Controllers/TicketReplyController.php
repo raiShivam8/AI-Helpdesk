@@ -48,16 +48,52 @@ class TicketReplyController extends Controller
      */
     public function store(StoreTicketReplyRequest $request, Ticket $ticket, \App\Services\TicketEmailService $ticketEmailService): RedirectResponse
     {
+        $attachmentPath = null;
+        $attachmentName = null;
+        $attachmentMime = null;
+
+        if ($request->hasFile('attachment') && $request->file('attachment')->isValid()) {
+            $file = $request->file('attachment');
+            $attachmentName = $file->getClientOriginalName();
+            $attachmentMime = $file->getClientMimeType();
+            $attachmentPath = $file->store('attachments', 'public');
+        }
+
         // SenderType is resolved from context, NOT from user input.
         // Authenticated portal users are always agents/admins → SenderType::Agent.
         $reply = $ticket->replies()->create([
-            'user_id'     => $request->user()->id,
-            'body'        => $request->validated()['body'],
-            'sender_type' => SenderType::Agent,
+            'user_id'                      => $request->user()->id,
+            'body'                         => $request->validated()['body'],
+            'sender_type'                  => SenderType::Agent,
+            'attachment_path'              => $attachmentPath,
+            'attachment_name'              => $attachmentName,
+            'attachment_mime'              => $attachmentMime,
+            'attachment_processing_status' => $attachmentPath ? 'pending' : 'none',
         ]);
+
+        if ($reply->isImageAttachment()) {
+            \App\Jobs\OptimizeImageAttachmentJob::dispatch($reply->id);
+        } else {
+            $reply->update(['attachment_processing_status' => 'none']);
+        }
 
         // Send email response to customer automatically via Laravel Mail SMTP
         $ticketEmailService->sendTicketReplyEmail($ticket, $reply);
+
+        // Notify assigned agent or staff members of reply
+        try {
+            if ($ticket->assigned_agent_id && $ticket->assigned_agent_id !== $request->user()->id) {
+                \App\Models\AppNotification::create([
+                    'user_id' => $ticket->assigned_agent_id,
+                    'title'   => "New Reply on Ticket #{$ticket->id}",
+                    'message' => "{$request->user()->name} replied to ticket: {$ticket->subject}",
+                    'link'    => route('tickets.show', $ticket),
+                    'type'    => 'ticket_reply',
+                ]);
+            }
+        } catch (\Throwable $notifEx) {
+            // Ignore notification failure
+        }
 
         return redirect()
             ->route('tickets.show', $ticket)

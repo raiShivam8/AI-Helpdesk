@@ -46,15 +46,15 @@ class TicketController extends Controller
         $search   = trim($validatedFilters['search'] ?? '');
         $search   = $search === '' ? null : $search;
 
-        $sort = $request->query('sort', 'created_at');
-        $direction = $request->query('direction', 'desc');
+        $sort = $request->query('sort', 'id');
+        $direction = $request->query('direction', 'asc');
 
         // Strict fallback for SQL injection prevention and robustness
         if (!in_array($sort, ['id', 'subject', 'sender_name', 'status', 'category', 'created_at'])) {
-            $sort = 'created_at';
+            $sort = 'id';
         }
         if (!in_array($direction, ['asc', 'desc'])) {
-            $direction = 'desc';
+            $direction = 'asc';
         }
 
         $query = Ticket::with('assignedAgent');
@@ -88,7 +88,7 @@ class TicketController extends Controller
             });
         }
 
-        $tickets = $query->orderBy($sort, $direction)->paginate(10)->withQueryString();
+        $tickets = $query->orderBy($sort, $direction)->paginate(8)->withQueryString();
 
         // Get all users who can be assigned (to populate agent filter)
         $agents = User::orderBy('name')->get();
@@ -121,9 +121,47 @@ class TicketController extends Controller
      */
     public function assign(UpdateTicketAssignmentRequest $request, Ticket $ticket): RedirectResponse
     {
+        $oldAgentId = $ticket->assigned_agent_id;
+        $newAgentId = $request->validated()['assigned_agent_id'] ?? null;
+        $transferReason = trim($request->input('transfer_reason', ''));
+
         $ticket->update([
-            'assigned_agent_id' => $request->validated()['assigned_agent_id'],
+            'assigned_agent_id' => $newAgentId,
         ]);
+
+        if ($newAgentId && $newAgentId != $oldAgentId) {
+            $newAgent = \App\Models\User::find($newAgentId);
+            $transferUser = $request->user();
+
+            $systemMsg = "🔄 Ticket transferred to " . ($newAgent ? $newAgent->name : 'Agent') . " by {$transferUser->name}.";
+            if (!empty($transferReason)) {
+                $systemMsg .= "\nTransfer Reason: " . $transferReason;
+            }
+
+            // Create system reply log in ticket thread
+            $ticket->replies()->create([
+                'user_id'         => $transferUser->id,
+                'body'            => $systemMsg,
+                'sender_type'     => \App\Enums\SenderType::System,
+                'transfer_reason' => $transferReason ?: null,
+            ]);
+
+            // Notify newly assigned agent (transfer reason included only for Admins)
+            if ($newAgent && $newAgent->id !== $transferUser->id) {
+                $notifMsg = "{$transferUser->name} transferred ticket '{$ticket->subject}' to you.";
+                if ($newAgent->isAdmin() && !empty($transferReason)) {
+                    $notifMsg .= " Reason: {$transferReason}";
+                }
+
+                \App\Models\AppNotification::create([
+                    'user_id' => $newAgent->id,
+                    'title'   => "Ticket #{$ticket->id} Transferred to You",
+                    'message' => $notifMsg,
+                    'link'    => route('tickets.show', $ticket),
+                    'type'    => 'ticket_transfer',
+                ]);
+            }
+        }
 
         return redirect()->route('tickets.show', $ticket)
             ->with('success', 'Ticket assignment updated successfully.');

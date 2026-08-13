@@ -41,7 +41,8 @@ class StoreTicketReplyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'body' => ['required', 'string', 'max:2000'],
+            'body'       => ['required', 'string', 'max:2000'],
+            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,gif,webp,svg,pdf,doc,docx,zip,txt'],
         ];
     }
 

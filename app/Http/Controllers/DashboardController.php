@@ -13,18 +13,33 @@ class DashboardController extends Controller
     /**
      * Display the dashboard with analytics metrics and chart data.
      */
-    public function index(): View
+    public function index(\Illuminate\Http\Request $request): View
     {
+        $selectedAgentId = $request->query('agent_id');
+        $agents = User::whereIn('role', [\App\Enums\Role::Agent, \App\Enums\Role::Admin])->orderBy('name')->get();
+        $selectedAgent = $selectedAgentId ? User::find($selectedAgentId) : null;
+
+        // Base query with agent filter
+        $baseQuery = Ticket::query();
+        if ($selectedAgentId) {
+            if ($selectedAgentId === 'unassigned') {
+                $baseQuery->whereNull('assigned_agent_id');
+            } else if ($selectedAgent && !$selectedAgent->isAdmin()) {
+                // Filter specifically for non-admin agents; Admins oversee overall company view
+                $baseQuery->where('assigned_agent_id', $selectedAgentId);
+            }
+        }
+
         // ── Core metrics ──────────────────────────────────────────────────────
 
-        $totalTickets = Ticket::count();
-        $openTickets  = Ticket::where('status', TicketStatus::Open)->count();
+        $totalTickets = (clone $baseQuery)->count();
+        $openTickets  = (clone $baseQuery)->where('status', TicketStatus::Open)->count();
 
-        $aiResolvedCount   = Ticket::whereNotNull('ai_resolved_at')->count();
+        $aiResolvedCount   = (clone $baseQuery)->whereNotNull('ai_resolved_at')->count();
         $aiResolvedTickets = (string) $aiResolvedCount;
         $aiResolutionPct   = $totalTickets > 0 ? round(($aiResolvedCount / $totalTickets) * 100, 1) . '%' : '0%';
 
-        $resolvedTickets = Ticket::where(function ($q) {
+        $resolvedTickets = (clone $baseQuery)->where(function ($q) {
             $q->whereNotNull('resolved_at')
               ->orWhereNotNull('ai_resolved_at')
               ->orWhereIn('status', [TicketStatus::Resolved, TicketStatus::Closed]);
@@ -48,19 +63,17 @@ class DashboardController extends Controller
 
         // ── Chart data: tickets created per day for last 14 days ──────────────
 
-        // Generate a complete series of the last 14 days (including gaps with 0)
         $today = now()->startOfDay();
         $start = now()->subDays(13)->startOfDay();
 
-        // Fetch actual counts from DB grouped by date
-        $rawCounts = Ticket::whereBetween('created_at', [$start, $today->copy()->endOfDay()])
+        $rawCounts = (clone $baseQuery)
+            ->whereBetween('created_at', [$start, $today->copy()->endOfDay()])
             ->selectRaw("DATE(created_at) AS ticket_date, COUNT(*) AS total")
             ->groupBy('ticket_date')
             ->orderBy('ticket_date')
             ->pluck('total', 'ticket_date')
             ->toArray();
 
-        // Build a zero-filled 14-day series
         $chartLabels = [];
         $chartData   = [];
 
@@ -70,8 +83,9 @@ class DashboardController extends Controller
             $chartData[]    = (int) ($rawCounts[$date] ?? 0);
         }
 
-        // ── Category & Status Breakdown (For Industrial Doughnut/Pie Analytics) ──────
-        $rawCategoryCounts = Ticket::select('category', DB::raw('COUNT(*) AS total'))
+        // ── Category & Status Breakdown ──────────────────────────────────────
+        $rawCategoryCounts = (clone $baseQuery)
+            ->select('category', DB::raw('COUNT(*) AS total'))
             ->groupBy('category')
             ->pluck('total', 'category')
             ->toArray();
@@ -88,13 +102,13 @@ class DashboardController extends Controller
             }
         }
 
-        // If no categorized tickets yet, add fallback categories for empty state visualization
         if (array_sum($categoryData) === 0) {
             $categoryLabels = ['Technical Question', 'Refund Request', 'General Support', 'Account Issues'];
             $categoryData   = [0, 0, 0, 0];
         }
 
-        $rawStatusCounts = Ticket::select('status', DB::raw('COUNT(*) AS total'))
+        $rawStatusCounts = (clone $baseQuery)
+            ->select('status', DB::raw('COUNT(*) AS total'))
             ->groupBy('status')
             ->pluck('total', 'status')
             ->toArray();
@@ -109,10 +123,12 @@ class DashboardController extends Controller
             $statusData[]   = $count;
         }
 
-        // ── Recent Tickets (Paginated 10 per page, up to 100 total) ─────────────
-        $tickets = Ticket::with('assignedAgent')
-            ->latest()
-            ->paginate(10);
+        // ── Recent Tickets (Paginated 8 per page: Page 1 shows tickets 1 to 8) ──
+        $tickets = (clone $baseQuery)
+            ->with('assignedAgent')
+            ->orderBy('id', 'asc')
+            ->paginate(8)
+            ->withQueryString();
 
         return view('dashboard', compact(
             'totalTickets',
@@ -127,6 +143,9 @@ class DashboardController extends Controller
             'statusLabels',
             'statusData',
             'tickets',
+            'agents',
+            'selectedAgentId',
+            'selectedAgent'
         ));
     }
 }

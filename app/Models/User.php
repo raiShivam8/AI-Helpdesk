@@ -50,6 +50,11 @@ class User extends Authenticatable
         return $this->role === Role::Agent;
     }
 
+    public function appNotifications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AppNotification::class);
+    }
+
     /**
      * Determine if the user has the customer role.
      */

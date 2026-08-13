@@ -8,6 +8,59 @@
         </div>
     </x-slot>
 
+    {{-- ═══ Agent Dashboard View Switcher Bar ═══ --}}
+    <div class="card p-3 mb-5 bg-slate-50/80 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">Dashboard View:</span>
+            @if($selectedAgent && $selectedAgent->isAdmin())
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Company Overall View ({{ $selectedAgent->name }})
+                </span>
+            @elseif($selectedAgent && !$selectedAgent->isAdmin())
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    Agent: {{ $selectedAgent->name }}
+                </span>
+            @elseif($selectedAgentId === 'unassigned')
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                    Unassigned Queue
+                </span>
+            @else
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200">
+                    Company Overall View
+                </span>
+            @endif
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            {{-- View Overall --}}
+            <a href="{{ route('dashboard') }}" class="px-3 py-1.5 text-xs font-semibold rounded-xl transition-all {{ empty($selectedAgentId) ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs border border-slate-200 dark:border-slate-600' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
+                🌐 Overall View
+            </a>
+
+            {{-- View My Agent Dashboard --}}
+            <a href="{{ route('dashboard', ['agent_id' => auth()->id()]) }}" class="px-3 py-1.5 text-xs font-semibold rounded-xl transition-all {{ $selectedAgentId == auth()->id() ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700' }}">
+                👤 Agent Dashboard
+            </a>
+
+            {{-- Filter by any Agent (Admin control) --}}
+            @if(auth()->user()->isAdmin())
+                <form method="GET" action="{{ route('dashboard') }}" class="inline-flex items-center gap-1.5">
+                    <select name="agent_id" onchange="this.form.submit()" class="form-select text-xs font-medium py-1 px-2.5 rounded-xl border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                        <option value="">-- Select Agent Dashboard --</option>
+                        @foreach($agents as $ag)
+                            <option value="{{ $ag->id }}" {{ $selectedAgentId == $ag->id ? 'selected' : '' }}>
+                                Agent: {{ $ag->name }} {{ $ag->id === auth()->id() ? '(You)' : '' }}
+                            </option>
+                        @endforeach
+                        <option value="unassigned" {{ $selectedAgentId === 'unassigned' ? 'selected' : '' }}>Unassigned Queue</option>
+                    </select>
+                </form>
+            @endif
+        </div>
+    </div>
+
     {{-- ═══ Page Action Header ═══ --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
@@ -15,13 +68,17 @@
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Real-time support ticket operations overview</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-            <form action="{{ route('tickets.sync-emails') }}" method="POST" class="inline-block">
+            <form action="{{ route('tickets.sync-emails') }}" method="POST" class="inline-block" x-data="{ syncing: false }" @submit="syncing = true">
                 @csrf
-                <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <button type="submit" :disabled="syncing" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-75 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors">
+                    <svg x-show="!syncing" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    <span>Sync IMAP Emails</span>
+                    <svg x-show="syncing" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" style="display: none;">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span x-text="syncing ? 'Syncing Emails...' : 'Sync IMAP Emails'">Sync IMAP Emails</span>
                 </button>
             </form>
             <span class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-xl ring-1 ring-emerald-200 dark:ring-emerald-700/50">
@@ -88,25 +145,47 @@
 
     </div>
 
-    {{-- ═══ Industrial Chart: Responsive Analytics (Bar / Category Donut / Status Donut) ═══ --}}
-    <div class="card p-5 mb-8">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-                <h2 id="chartTitleText" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Ticket Analytics</h2>
-                <p id="chartSubTitleText" class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">30 days activity overview</p>
+    {{-- ═══ Dual Analytics Section: Side-by-Side Line Chart & Pie/Donut Chart ═══ --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+
+        {{-- Left: 14-Day Line Trend Chart --}}
+        <div class="card p-5">
+            <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">14-Day Ticket Volume</h2>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Daily tickets created over the last 14 days</p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-700/50">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    Line Trend
+                </span>
             </div>
-            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl ring-1 ring-slate-200 dark:ring-slate-700/60 self-start sm:self-auto">
-                <button type="button" id="btnChartCategory" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs">
-                    Category Donut
-                </button>
-                <button type="button" id="btnChartStatus" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
-                    Status Donut
-                </button>
+            <div class="relative h-64 sm:h-60">
+                <canvas id="ticketsLineChart"></canvas>
             </div>
         </div>
-        <div class="relative h-64 sm:h-60 flex items-center justify-center">
-            <canvas id="ticketsBarChart"></canvas>
+
+        {{-- Right: Category / Status Pie Donut Chart --}}
+        <div class="card p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                    <h2 id="pieChartTitleText" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Category Distribution</h2>
+                    <p id="pieChartSubTitleText" class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Breakdown by ticket category</p>
+                </div>
+                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl ring-1 ring-slate-200 dark:ring-slate-700/60 self-start sm:self-auto">
+                    <button type="button" id="btnPieCategory" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs">
+                        Category
+                    </button>
+                    <button type="button" id="btnPieStatus" class="px-2.5 py-1 text-xs font-semibold rounded-lg transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+                        Status
+                    </button>
+                </div>
+            </div>
+            <div class="relative h-64 sm:h-60 flex items-center justify-center">
+                <canvas id="ticketsPieChart"></canvas>
+            </div>
         </div>
+
     </div>
 
     {{-- ═══ Recent Tickets Section (Paginated) ═══ --}}
@@ -150,11 +229,19 @@
 
                             {{-- Subject --}}
                             <td class="py-3 px-4 max-w-[280px]">
-                                <a href="{{ route('tickets.show', $ticket) }}"
-                                   class="block font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 truncate transition-colors text-sm"
-                                   title="{{ $ticket->subject }}">
-                                    {{ $ticket->subject }}
-                                </a>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <a href="{{ route('tickets.show', $ticket) }}"
+                                       class="font-semibold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 truncate transition-colors text-sm"
+                                       title="{{ $ticket->subject }}">
+                                        {{ $ticket->subject }}
+                                    </a>
+                                    @if($ticket->replies->contains(fn($r) => $r->hasAttachment()))
+                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded shadow-2xs">
+                                            <svg class="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                            Image
+                                        </span>
+                                    @endif
+                                </div>
                                 <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate" title="{{ $ticket->body }}">
                                     {{ Str::limit($ticket->body, 60) }}
                                 </p>
@@ -330,8 +417,9 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                const ctx = document.getElementById('ticketsBarChart');
-                if (!ctx) return;
+                const lineCtx = document.getElementById('ticketsLineChart');
+                const pieCtx  = document.getElementById('ticketsPieChart');
+                if (!lineCtx || !pieCtx) return;
 
                 const dailyLabels    = @json($chartLabels);
                 const dailyData      = @json($chartData);
@@ -340,10 +428,10 @@
                 const statusLabels   = @json($statusLabels);
                 const statusData     = @json($statusData);
 
-                const chartTitleEl    = document.getElementById('chartTitleText');
-                const chartSubTitleEl = document.getElementById('chartSubTitleText');
-                const btnCategory     = document.getElementById('btnChartCategory');
-                const btnStatus       = document.getElementById('btnChartStatus');
+                const pieTitleEl    = document.getElementById('pieChartTitleText');
+                const pieSubTitleEl = document.getElementById('pieChartSubTitleText');
+                const btnPieCategory = document.getElementById('btnPieCategory');
+                const btnPieStatus   = document.getElementById('btnPieStatus');
 
                 // Industrial Dark/Light Palette
                 const industrialColors = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#3b82f6', '#06b6d4', '#14b8a6'];
@@ -364,10 +452,11 @@
                     };
                 }
 
-                let currentView = 'category';
-                let chartInstance = null;
+                let lineChartInstance = null;
+                let pieChartInstance  = null;
+                let currentPieView    = 'category';
 
-                // Industrial Plugin: Draw total ticket count inside Doughnut hole
+                // Center Text Plugin for Doughnut chart
                 const centerTextPlugin = {
                     id: 'centerText',
                     beforeDraw(chart) {
@@ -398,57 +487,126 @@
                     }
                 };
 
-                function updateTabUI() {
+                // ── 1. Render Left Line Chart ──────────────────────────────────────
+                function renderLineChart() {
+                    if (lineChartInstance) {
+                        lineChartInstance.destroy();
+                    }
+
+                    const c = getThemeColors();
+                    const dark = isDark();
+
+                    const ctx2d = lineCtx.getContext('2d');
+                    const gradient = ctx2d.createLinearGradient(0, 0, 0, 220);
+                    gradient.addColorStop(0, dark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.25)');
+                    gradient.addColorStop(1, dark ? 'rgba(99, 102, 241, 0.0)' : 'rgba(99, 102, 241, 0.0)');
+
+                    lineChartInstance = new Chart(lineCtx, {
+                        type: 'line',
+                        data: {
+                            labels: dailyLabels,
+                            datasets: [{
+                                label: 'Tickets Created',
+                                data: dailyData,
+                                borderColor: '#6366f1',
+                                borderWidth: 3,
+                                backgroundColor: gradient,
+                                fill: true,
+                                tension: 0.35,
+                                pointBackgroundColor: '#6366f1',
+                                pointBorderColor: c.ringBorder,
+                                pointBorderWidth: 2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: { duration: 350 },
+                            scales: {
+                                x: {
+                                    grid: { color: c.gridColor },
+                                    ticks: { color: c.tickColor, font: { size: 11, family: 'Inter, sans-serif' } }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: c.gridColor },
+                                    ticks: {
+                                        color: c.tickColor,
+                                        precision: 0,
+                                        font: { size: 11, family: 'Inter, sans-serif' }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: c.tooltipBg,
+                                    titleColor: c.tooltipText,
+                                    bodyColor: c.tooltipText,
+                                    borderColor: c.tooltipBdr,
+                                    borderWidth: 1,
+                                    padding: 10,
+                                    cornerRadius: 8,
+                                    callbacks: {
+                                        label: function(context) {
+                                            const val = context.raw || 0;
+                                            return `  ${val} ticket${val !== 1 ? 's' : ''} created`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // ── 2. Render Right Pie / Donut Chart ──────────────────────────────
+                function updatePieTabUI() {
                     const activeCls   = ['bg-white', 'dark:bg-slate-700', 'text-slate-900', 'dark:text-white', 'shadow-xs'];
                     const inactiveCls = ['text-slate-500', 'hover:text-slate-900', 'dark:text-slate-400', 'dark:hover:text-white'];
 
-                    [btnCategory, btnStatus].forEach(btn => {
+                    [btnPieCategory, btnPieStatus].forEach(btn => {
                         if (btn) btn.classList.remove(...activeCls);
                         if (btn) btn.classList.add(...inactiveCls);
                     });
 
-                    if (currentView === 'category' && btnCategory) {
-                        btnCategory.classList.remove(...inactiveCls);
-                        btnCategory.classList.add(...activeCls);
-                    } else if (currentView === 'status' && btnStatus) {
-                        btnStatus.classList.remove(...inactiveCls);
-                        btnStatus.classList.add(...activeCls);
+                    if (currentPieView === 'category' && btnPieCategory) {
+                        btnPieCategory.classList.remove(...inactiveCls);
+                        btnPieCategory.classList.add(...activeCls);
+                    } else if (currentPieView === 'status' && btnPieStatus) {
+                        btnPieStatus.classList.remove(...inactiveCls);
+                        btnPieStatus.classList.add(...activeCls);
                     }
                 }
 
-                function renderChart() {
-                    if (chartInstance) {
-                        chartInstance.destroy();
+                function renderPieChart() {
+                    if (pieChartInstance) {
+                        pieChartInstance.destroy();
                     }
 
                     const c = getThemeColors();
-                    updateTabUI();
+                    updatePieTabUI();
 
-                    let type = 'doughnut';
                     let labels = [];
                     let data = [];
                     let bgColors = [];
-                    let borderColors = c.ringBorder;
 
-                    if (currentView === 'category') {
-                        type = 'doughnut';
+                    if (currentPieView === 'category') {
                         labels = categoryLabels;
                         data = categoryData;
                         bgColors = industrialColors.slice(0, labels.length);
-                        borderColors = c.ringBorder;
-                        if (chartTitleEl) chartTitleEl.textContent = 'Category Distribution';
-                        if (chartSubTitleEl) chartSubTitleEl.textContent = 'Breakdown by ticket category';
-                    } else if (currentView === 'status') {
-                        type = 'doughnut';
+                        if (pieTitleEl) pieTitleEl.textContent = 'Category Distribution';
+                        if (pieSubTitleEl) pieSubTitleEl.textContent = 'Breakdown by ticket category';
+                    } else {
                         labels = statusLabels;
                         data = statusData;
                         bgColors = ['#3b82f6', '#8b5cf6', '#10b981', '#64748b'].slice(0, labels.length);
-                        borderColors = c.ringBorder;
-                        if (chartTitleEl) chartTitleEl.textContent = 'Status Breakdown';
-                        if (chartSubTitleEl) chartSubTitleEl.textContent = 'Current status distribution';
+                        if (pieTitleEl) pieTitleEl.textContent = 'Status Breakdown';
+                        if (pieSubTitleEl) pieSubTitleEl.textContent = 'Current status distribution';
                     }
 
-                    chartInstance = new Chart(ctx, {
+                    pieChartInstance = new Chart(pieCtx, {
                         type: 'doughnut',
                         data: {
                             labels: labels,
@@ -456,7 +614,7 @@
                                 label: 'Tickets',
                                 data: data,
                                 backgroundColor: bgColors,
-                                borderColor: borderColors,
+                                borderColor: c.ringBorder,
                                 borderWidth: 3,
                                 hoverOffset: 6,
                             }]
@@ -474,7 +632,7 @@
                                     labels: {
                                         color: c.tickColor,
                                         font: { size: 11, family: 'Inter, sans-serif' },
-                                        padding: 14,
+                                        padding: 12,
                                         boxWidth: 10,
                                         usePointStyle: true,
                                         pointStyle: 'circle',
@@ -510,16 +668,18 @@
                     });
                 }
 
-                // Initial render
-                renderChart();
+                // Initial render of both charts
+                renderLineChart();
+                renderPieChart();
 
-                // Button event listeners
-                if (btnCategory) btnCategory.addEventListener('click', () => { currentView = 'category'; renderChart(); });
-                if (btnStatus)   btnStatus.addEventListener('click', () => { currentView = 'status'; renderChart(); });
+                // Button listeners for Right Pie Chart
+                if (btnPieCategory) btnPieCategory.addEventListener('click', () => { currentPieView = 'category'; renderPieChart(); });
+                if (btnPieStatus)   btnPieStatus.addEventListener('click', () => { currentPieView = 'status'; renderPieChart(); });
 
                 // Dark mode observer
                 const observer = new MutationObserver(function () {
-                    renderChart();
+                    renderLineChart();
+                    renderPieChart();
                 });
 
                 observer.observe(document.documentElement, {

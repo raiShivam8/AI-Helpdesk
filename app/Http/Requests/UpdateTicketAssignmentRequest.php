@@ -13,7 +13,7 @@ class UpdateTicketAssignmentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() && $this->user()->isAdmin();
+        return $this->user() && ($this->user()->isAdmin() || $this->user()->isAgent());
     }
 
     /**
@@ -31,6 +31,7 @@ class UpdateTicketAssignmentRequest extends FormRequest
                           ->whereNull('deleted_at');
                 }),
             ],
+            'transfer_reason' => ['nullable', 'string', 'max:1000'],
         ];
     }
 

@@ -23,10 +23,14 @@ class StoreInboundEmailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'sender_email' => 'required|email|max:255',
-            'sender_name' => 'required|string|max:255',
-            'subject' => 'required|string|max:255',
-            'body' => 'required|string',
+            'sender_email'   => 'required|email|max:255',
+            'sender_name'    => 'required|string|max:255',
+            'subject'        => 'required|string|max:255',
+            'body'           => 'required|string',
+            'body_html'      => 'nullable|string',
+            'attachments'    => 'nullable|array',
+            'attachment'     => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,zip,txt|max:10240',
+            'attachments.*'  => 'nullable',
         ];
     }
 }

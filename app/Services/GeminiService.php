@@ -52,8 +52,8 @@ class GeminiService
         }
 
         // Primary model and ordered fallback models for high demand / rate limit resilience
-        $primaryModel = config('services.gemini.model', 'gemini-2.0-flash');
-        $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']));
+        $primaryModel = config('services.gemini.model', 'gemini-flash-latest');
+        $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-lite-latest']));
 
         $payload = array_merge([
             'contents' => [
@@ -315,6 +315,9 @@ class GeminiService
     /**
      * Auto-resolve a ticket using the knowledge base.
      */
+    /**
+     * Auto-resolve a ticket using the knowledge base.
+     */
     public function autoResolveTicket(string $subject, string $message, string $knowledgeBase, string $customerName): array
     {
         $subject = trim($subject);
@@ -327,8 +330,8 @@ class GeminiService
         $prompt = "You are a customer support automation agent. You will be given a customer support ticket and a knowledge base markdown document.\n\n" .
                   "Your tasks:\n" .
                   "1. Read the knowledge base carefully.\n" .
-                  "2. Determine if the customer's question or issue matches any topic, Q&A, or instructions in the knowledge base (including technical issues, error messages, website loading problems, account issues, refund requests, password reset, etc.).\n" .
-                  "   - If the knowledge base contains relevant information, troubleshooting steps, or requests for required details (like screenshots or browser info) for their issue, set \"can_resolve\": true.\n" .
+                  "2. Determine if the customer's question or issue matches any topic, Q&A, or instructions in the knowledge base (including technical issues, error messages, website loading problems, account issues, refund requests, password reset, course activation, etc.).\n" .
+                  "   - If the knowledge base contains relevant information, troubleshooting steps, or requests for required details for their issue, set \"can_resolve\": true.\n" .
                   "3. If can_resolve is true, generate a professional, friendly, and helpful customer support reply based on the knowledge base content:\n" .
                   "   - Address the customer by their first name: '{$firstName}' (e.g. 'Hi {$firstName},' or 'Dear {$firstName},').\n" .
                   "   - Answer the question or provide the relevant steps/instructions from the knowledge base.\n" .
@@ -347,16 +350,7 @@ class GeminiService
                   "  \"reply\": \"Generated support reply message with newlines preserved, or null if cannot resolve\"\n" .
                   "}";
 
-        // 1. Instant local Knowledge Base pattern matching (< 5ms resolution speed)
-        $localMatch = $this->fallbackKnowledgeBaseMatch($subject, $message, $knowledgeBase, $firstName);
-        if ($localMatch['can_resolve'] ?? false) {
-            Log::info('Instant local Knowledge Base match found for auto-resolution (< 5ms)', [
-                'subject' => $subject,
-            ]);
-            return $localMatch;
-        }
-
-        // 2. Query Gemini API for complex or un-patterned queries
+        // 1. Try Gemini API first if configured and available
         try {
             $resolveText = $this->generateContent($prompt, [
                 'generationConfig' => [
@@ -367,22 +361,159 @@ class GeminiService
             $decoded = json_decode($resolveText, true);
 
             if (json_last_error() === JSON_ERROR_NONE && isset($decoded['can_resolve'])) {
-                return [
-                    'can_resolve' => filter_var($decoded['can_resolve'], FILTER_VALIDATE_BOOLEAN),
-                    'reply'       => isset($decoded['reply']) ? trim($decoded['reply']) : null,
-                ];
+                $canResolve = filter_var($decoded['can_resolve'], FILTER_VALIDATE_BOOLEAN);
+                $reply = isset($decoded['reply']) ? trim($decoded['reply']) : null;
+
+                if ($canResolve && !empty($reply)) {
+                    Log::info('Gemini API auto-resolution succeeded', [
+                        'subject' => $subject,
+                    ]);
+                    return [
+                        'can_resolve' => true,
+                        'reply'       => $reply,
+                    ];
+                }
             }
         } catch (\Throwable $e) {
-            Log::warning('Gemini API auto-resolution call failed or rate-limited.', [
+            Log::warning('Gemini API auto-resolution call failed or rate-limited. Falling back to dynamic Knowledge Base matching.', [
                 'error'   => $e->getMessage(),
                 'subject' => $subject,
             ]);
         }
 
-        return [
-            'can_resolve' => false,
-            'reply'       => null,
-        ];
+        // 2. Dynamic Knowledge Base matching directly on knowledgeBase content
+        $dynamicMatch = $this->matchKnowledgeBaseDynamic($subject, $message, $knowledgeBase, $firstName);
+        if ($dynamicMatch['can_resolve'] ?? false) {
+            Log::info('Dynamic Knowledge Base match found for auto-resolution', [
+                'subject' => $subject,
+            ]);
+            return $dynamicMatch;
+        }
+
+        // 3. Fallback Knowledge Base Pattern Matching as backstop
+        return $this->fallbackKnowledgeBaseMatch($subject, $message, $knowledgeBase, $firstName);
+    }
+
+    /**
+     * Parse knowledge-base.md content into Q&A entries and dynamically match ticket query.
+     */
+    public function matchKnowledgeBaseDynamic(string $subject, string $message, string $knowledgeBase, string $firstName): array
+    {
+        if (empty($knowledgeBase)) {
+            return ['can_resolve' => false, 'reply' => null];
+        }
+
+        $queryText = mb_strtolower($subject . ' ' . $message, 'UTF-8');
+        $sections  = $this->parseKnowledgeBaseMarkdown($knowledgeBase);
+
+        $bestMatchScore = 0;
+        $bestMatchAnswer = null;
+
+        foreach ($sections as $section) {
+            $question = mb_strtolower($section['question'], 'UTF-8');
+            $answer   = $section['answer'];
+
+            $score = 0;
+
+            // Check key phrase matches in question
+            $qKeywords = preg_split('/\W+/u', $question, -1, PREG_SPLIT_NO_EMPTY);
+            $qKeywords = array_filter($qKeywords, fn($w) => mb_strlen($w) > 3 && !in_array($w, ['how', 'what', 'does', 'have', 'from', 'with', 'your', 'this', 'that', 'please']));
+
+            $matchedCount = 0;
+            foreach ($qKeywords as $kw) {
+                if (str_contains($queryText, $kw)) {
+                    $matchedCount++;
+                }
+            }
+
+            if (count($qKeywords) > 0) {
+                $score = $matchedCount / count($qKeywords);
+            }
+
+            // Bonus for specific topic phrases
+            if (str_contains($question, 'password') && (str_contains($queryText, 'password') || str_contains($queryText, 'forgot') || str_contains($queryText, 'reset'))) {
+                $score += 0.6;
+            }
+            if (str_contains($question, 'account') && (str_contains($queryText, 'account') || str_contains($queryText, 'sign up') || str_contains($queryText, 'register'))) {
+                $score += 0.6;
+            }
+            if (str_contains($question, 'error') && (str_contains($queryText, 'error') || str_contains($queryText, 'issue') || str_contains($queryText, 'bug'))) {
+                $score += 0.6;
+            }
+            if (str_contains($question, 'loading') && (str_contains($queryText, 'loading') || str_contains($queryText, 'not opening') || str_contains($queryText, 'site down'))) {
+                $score += 0.6;
+            }
+            if (str_contains($question, 'refund') && str_contains($queryText, 'refund')) {
+                $score += 0.6;
+            }
+            if (str_contains($question, 'activated') && (str_contains($queryText, 'paid') || str_contains($queryText, 'activated') || str_contains($queryText, 'course') || str_contains($queryText, 'payment'))) {
+                $score += 0.6;
+            }
+
+            if ($score > $bestMatchScore && $score >= 0.5) {
+                $bestMatchScore  = $score;
+                $bestMatchAnswer = $answer;
+            }
+        }
+
+        if ($bestMatchAnswer !== null) {
+            $formattedReply = "Hi {$firstName},\n\n{$bestMatchAnswer}\n\nSupport Team";
+            return [
+                'can_resolve' => true,
+                'reply'       => $formattedReply,
+            ];
+        }
+
+        return ['can_resolve' => false, 'reply' => null];
+    }
+
+    /**
+     * Parse markdown knowledge base into structured Q&A array.
+     */
+    protected function parseKnowledgeBaseMarkdown(string $content): array
+    {
+        $entries = [];
+        $lines   = explode("\n", $content);
+
+        $currentQuestion = null;
+        $currentAnswerLines = [];
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+
+            if (str_starts_with($trimmed, '### Q:') || str_starts_with($trimmed, '### ')) {
+                if ($currentQuestion !== null && !empty($currentAnswerLines)) {
+                    $entries[] = [
+                        'question' => $currentQuestion,
+                        'answer'   => trim(implode("\n", $currentAnswerLines)),
+                    ];
+                }
+                $currentQuestion = trim(preg_replace('/^###\s*(Q:\s*)?/i', '', $trimmed));
+                $currentAnswerLines = [];
+            } elseif ($currentQuestion !== null) {
+                if (str_starts_with($trimmed, '# ') || str_starts_with($trimmed, '#2 ') || str_starts_with($trimmed, '#3 ') || str_starts_with($trimmed, '---')) {
+                    if (!empty($currentAnswerLines)) {
+                        $entries[] = [
+                            'question' => $currentQuestion,
+                            'answer'   => trim(implode("\n", $currentAnswerLines)),
+                        ];
+                        $currentQuestion = null;
+                        $currentAnswerLines = [];
+                    }
+                } else {
+                    $currentAnswerLines[] = $line;
+                }
+            }
+        }
+
+        if ($currentQuestion !== null && !empty($currentAnswerLines)) {
+            $entries[] = [
+                'question' => $currentQuestion,
+                'answer'   => trim(implode("\n", $currentAnswerLines)),
+            ];
+        }
+
+        return $entries;
     }
 
     /**

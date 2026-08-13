@@ -87,10 +87,10 @@ class TicketsPageTest extends TestCase
         $response->assertSee('Agent Bobby');
         $response->assertSee('Unassigned');
 
-        // Verify sorting (New Ticket appears before Old Ticket in HTML output)
+        // Verify default sorting (Old Ticket #1 appears before New Ticket #2 in HTML output)
         $response->assertSeeInOrder([
-            'New Ticket Subject',
             'Old Ticket Subject',
+            'New Ticket Subject',
         ]);
     }
 
@@ -193,10 +193,10 @@ class TicketsPageTest extends TestCase
         $response->assertStatus(200);
         $response->assertSeeInOrder(['Beta Subject', 'Alpha Subject']);
 
-        // 7. Invalid sort parameters default to created_at descending (B then A)
+        // 7. Invalid sort parameters default to id ascending (A then B)
         $response = $this->actingAs($user)->get(route('tickets.index', ['sort' => 'invalid_col', 'direction' => 'invalid_dir']));
         $response->assertStatus(200);
-        $response->assertSeeInOrder(['Beta Subject', 'Alpha Subject']);
+        $response->assertSeeInOrder(['Alpha Subject', 'Beta Subject']);
     }
 
     public function test_tickets_can_be_filtered_by_status(): void
@@ -393,20 +393,20 @@ class TicketsPageTest extends TestCase
             ]
         )->create();
 
-        // Request first page (should see 10 tickets, from Ticket Subject 20 down to Ticket Subject 11 due to desc order)
+        // Request first page (should see tickets 1 to 8 due to default id asc order)
         $response = $this->actingAs($user)->get(route('tickets.index'));
         $response->assertStatus(200);
-        $response->assertSee('Ticket Subject 20');
-        $response->assertSee('Ticket Subject 11');
-        $response->assertDontSee('Ticket Subject 10'); // On page 2
+        $response->assertSee('Ticket Subject 1');
+        $response->assertSee('Ticket Subject 8');
+        $response->assertDontSee('Ticket Subject 9'); // On page 2
         $response->assertSee('page=2'); // Pagination links
 
-        // Request second page
+        // Request second page (should see tickets 9 to 16)
         $response = $this->actingAs($user)->get(route('tickets.index', ['page' => 2]));
         $response->assertStatus(200);
-        $response->assertDontSee('Ticket Subject 20');
-        $response->assertSee('Ticket Subject 10');
-        $response->assertSee('Ticket Subject 1');
+        $response->assertDontSee('Ticket Subject 17'); // On page 3
+        $response->assertSee('Ticket Subject 9');
+        $response->assertSee('Ticket Subject 16');
     }
 
     public function test_pagination_preserves_sorting_and_filters(): void
@@ -458,10 +458,10 @@ class TicketsPageTest extends TestCase
 
         $response->assertStatus(200);
         
-        // Assert we see the remaining tickets (11 to 20, since sorted id asc)
-        $response->assertSee('Billing Open Ticket 11');
-        $response->assertSee('Billing Open Ticket 20');
-        $response->assertDontSee('Billing Open Ticket 10'); // On page 1
+        // Assert we see page 2 tickets (9 to 16, since sorted id asc with 8 items/page)
+        $response->assertSee('Billing Open Ticket 9');
+        $response->assertSee('Billing Open Ticket 16');
+        $response->assertDontSee('Billing Open Ticket 8'); // On page 1
     }
 
     public function test_guests_cannot_access_ticket_details(): void
@@ -549,7 +549,7 @@ class TicketsPageTest extends TestCase
         $this->assertNull($ticket->fresh()->assigned_agent_id);
     }
 
-    public function test_agents_cannot_assign_tickets(): void
+    public function test_agents_can_transfer_tickets(): void
     {
         $agentUser = User::factory()->create(['role' => Role::Agent]);
         $anotherAgent = User::factory()->create(['role' => Role::Agent]);
@@ -557,10 +557,11 @@ class TicketsPageTest extends TestCase
 
         $response = $this->actingAs($agentUser)->patch(route('tickets.assign', $ticket), [
             'assigned_agent_id' => $anotherAgent->id,
+            'transfer_reason'   => 'Transferring ticket to another agent',
         ]);
 
-        $response->assertStatus(403);
-        $this->assertNull($ticket->fresh()->assigned_agent_id);
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertEquals($anotherAgent->id, $ticket->fresh()->assigned_agent_id);
     }
 
     public function test_assignment_validates_user_must_be_agent(): void

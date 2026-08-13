@@ -63,6 +63,17 @@ class AutoResolveTicketJob implements ShouldQueue
 
         // Resolve the AI agent user
         $aiAgent = User::withTrashed()->where('email', AiAgentSeeder::EMAIL)->first();
+        if (!$aiAgent) {
+            $aiAgent = User::firstOrCreate(
+                ['email' => AiAgentSeeder::EMAIL],
+                [
+                    'name'              => 'AI',
+                    'password'          => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(64)),
+                    'role'              => Role::Agent,
+                    'email_verified_at' => now(),
+                ]
+            );
+        }
 
         try {
             // Update ticket status to processing during analysis

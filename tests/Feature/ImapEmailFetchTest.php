@@ -463,5 +463,50 @@ class ImapEmailFetchTest extends TestCase
         $this->assertStringNotContainsString('color-scheme', $cleaned);
         $this->assertStringNotContainsString('background-color', $cleaned);
     }
+
+    /**
+     * Test inbound email replying to an existing ticket appends reply and screenshot attachment to existing ticket.
+     */
+    public function test_inbound_email_reply_appends_to_existing_ticket_with_screenshot_attachment(): void
+    {
+        Bus::fake([
+            TicketClassificationJob::class,
+            AutoResolveTicketJob::class,
+        ]);
+
+        $ticket = Ticket::factory()->create([
+            'subject' => 'Original Problem with login',
+            'status'  => TicketStatus::Open,
+        ]);
+
+        $action = app(\App\Actions\CreateTicketFromInboundEmailAction::class);
+
+        $replyTicket = $action->execute([
+            'message_id'   => '<reply-screenshot-999@example.com>',
+            'sender_email' => $ticket->sender_email,
+            'sender_name'  => $ticket->sender_name,
+            'subject'      => "Re: [Ticket #{$ticket->id}] Original Problem with login",
+            'body'         => 'Here is the screenshot of the error screen.',
+            'body_html'    => '<p>Here is the screenshot of the error screen.</p>',
+            'attachments'  => [
+                [
+                    'name' => 'error_screenshot.png',
+                    'mime' => 'image/png',
+                    'path' => 'attachments/test_error_screenshot.png',
+                    'url'  => 'http://localhost/storage/attachments/test_error_screenshot.png',
+                ],
+            ],
+        ]);
+
+        $this->assertEquals($ticket->id, $replyTicket->id);
+
+        $this->assertDatabaseHas('ticket_replies', [
+            'ticket_id'       => $ticket->id,
+            'body'            => 'Here is the screenshot of the error screen.',
+            'sender_type'     => SenderType::Customer->value,
+            'attachment_name' => 'error_screenshot.png',
+            'attachment_path' => 'attachments/test_error_screenshot.png',
+        ]);
+    }
 }
 

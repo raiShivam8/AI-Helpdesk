@@ -31,7 +31,7 @@ class CreateTicketFromInboundEmailAction
      *                          - received_date (optional)
      * @return Ticket
      */
-    public function execute(array $parsedData): Ticket
+    public function execute(array $parsedData, bool $syncJobs = true): Ticket
     {
         $ticket = DB::transaction(function () use ($parsedData) {
             $senderEmail = strtolower(trim($parsedData['sender_email']));
@@ -67,25 +67,141 @@ class CreateTicketFromInboundEmailAction
                 $cleanedBody = '(No content)';
             }
 
-            // 2. Create the ticket record
+            // Check if inbound email is a reply to an existing ticket via Subject (e.g. "[Ticket #12]" or "Ticket #12")
+            $existingTicket = null;
+            $subject = trim($parsedData['subject'] ?? '');
+
+            if (preg_match('/(?:\[Ticket\s*#|Ticket\s*#|#)(\d+)/i', $subject, $matches)) {
+                $ticketId = (int) $matches[1];
+                $existingTicket = Ticket::find($ticketId);
+            }
+
+            $attachments = $parsedData['attachments'] ?? [];
+            $firstAttachment = $attachments[0] ?? null;
+
+            $createdReplies = [];
+
+            // If a matching ticket exists, append reply to the existing ticket
+            if ($existingTicket) {
+                $r1 = $existingTicket->replies()->create([
+                    'user_id'                      => $customer->id,
+                    'body'                         => $cleanedBody,
+                    'body_html'                    => $parsedData['body_html'] ?? null,
+                    'sender_type'                  => SenderType::Customer,
+                    'attachment_path'              => $firstAttachment['path'] ?? null,
+                    'attachment_name'              => $firstAttachment['name'] ?? null,
+                    'attachment_mime'              => $firstAttachment['mime'] ?? null,
+                    'attachment_processing_status' => ($firstAttachment['path'] ?? null) ? 'pending' : 'none',
+                    'created_at'                   => $parsedData['received_date'] ?? now(),
+                ]);
+                $createdReplies[] = $r1;
+
+                if (count($attachments) > 1) {
+                    for ($i = 1; $i < count($attachments); $i++) {
+                        $att = $attachments[$i];
+                        $rExtra = $existingTicket->replies()->create([
+                            'user_id'                      => $customer->id,
+                            'body'                         => 'Attachment: ' . ($att['name'] ?? 'File'),
+                            'sender_type'                  => SenderType::Customer,
+                            'attachment_path'              => $att['path'] ?? null,
+                            'attachment_name'              => $att['name'] ?? null,
+                            'attachment_mime'              => $att['mime'] ?? null,
+                            'attachment_processing_status' => ($att['path'] ?? null) ? 'pending' : 'none',
+                            'created_at'                   => $parsedData['received_date'] ?? now(),
+                        ]);
+                        $createdReplies[] = $rExtra;
+                    }
+                }
+
+                if ($existingTicket->status === TicketStatus::Resolved || $existingTicket->status === TicketStatus::Closed) {
+                    $existingTicket->update(['status' => TicketStatus::Open]);
+                }
+
+                Log::info("Appended customer reply with attachments to existing Ticket #{$existingTicket->id}", [
+                    'ticket_id' => $existingTicket->id,
+                    'customer'  => $senderEmail,
+                ]);
+
+                try {
+                    $staff = User::whereIn('role', [Role::Admin->value, Role::Agent->value])->get();
+                    foreach ($staff as $user) {
+                        \App\Models\AppNotification::create([
+                            'user_id' => $user->id,
+                            'title'   => "New Customer Reply on Ticket #{$existingTicket->id}",
+                            'message' => "Customer {$senderName} replied to ticket: {$existingTicket->subject}",
+                            'link'    => route('tickets.show', $existingTicket),
+                            'type'    => 'ticket_reply',
+                        ]);
+                    }
+                } catch (\Throwable $notifEx) {
+                    Log::warning('Failed to dispatch reply AppNotification', ['error' => $notifEx->getMessage()]);
+                }
+
+                // Dispatch asynchronous image optimization jobs
+                foreach ($createdReplies as $replyItem) {
+                    if ($replyItem->isImageAttachment()) {
+                        \App\Jobs\OptimizeImageAttachmentJob::dispatch($replyItem->id);
+                    } else {
+                        $replyItem->update(['attachment_processing_status' => 'none']);
+                    }
+                }
+
+                return $existingTicket;
+            }
+
+            // 2. Create the new ticket record if no existing ticket matched
             $ticket = Ticket::create([
                 'message_id'   => $parsedData['message_id'] ?? null,
                 'sender_email' => $senderEmail,
                 'sender_name'  => $senderName,
-                'subject'      => !empty(trim($parsedData['subject'] ?? '')) ? trim($parsedData['subject']) : '(No Subject)',
+                'subject'      => !empty($subject) ? $subject : '(No Subject)',
                 'body'         => $cleanedBody,
                 'status'       => TicketStatus::New,
                 'created_at'   => $parsedData['received_date'] ?? now(),
             ]);
 
-            // 3. Create the initial TicketReply with sender_type = Customer
-            TicketReply::create([
-                'ticket_id'   => $ticket->id,
-                'user_id'     => $customer->id,
-                'body'        => $ticket->body,
-                'sender_type' => SenderType::Customer,
-                'created_at'  => $ticket->created_at,
+            // 3. Create the initial TicketReply with sender_type = Customer (including email image/attachment if present)
+            $r1 = TicketReply::create([
+                'ticket_id'                    => $ticket->id,
+                'user_id'                      => $customer->id,
+                'body'                         => $ticket->body,
+                'body_html'                    => $parsedData['body_html'] ?? null,
+                'sender_type'                  => SenderType::Customer,
+                'attachment_path'              => $firstAttachment['path'] ?? null,
+                'attachment_name'              => $firstAttachment['name'] ?? null,
+                'attachment_mime'              => $firstAttachment['mime'] ?? null,
+                'attachment_processing_status' => ($firstAttachment['path'] ?? null) ? 'pending' : 'none',
+                'created_at'                   => $ticket->created_at,
             ]);
+            $createdReplies[] = $r1;
+
+            // Save any additional attachments sent by customer as extra reply items
+            if (count($attachments) > 1) {
+                for ($i = 1; $i < count($attachments); $i++) {
+                    $att = $attachments[$i];
+                    $rExtra = TicketReply::create([
+                        'ticket_id'                    => $ticket->id,
+                        'user_id'                      => $customer->id,
+                        'body'                         => 'Attachment: ' . ($att['name'] ?? 'File'),
+                        'sender_type'                  => SenderType::Customer,
+                        'attachment_path'              => $att['path'] ?? null,
+                        'attachment_name'              => $att['name'] ?? null,
+                        'attachment_mime'              => $att['mime'] ?? null,
+                        'attachment_processing_status' => ($att['path'] ?? null) ? 'pending' : 'none',
+                        'created_at'                   => $ticket->created_at,
+                    ]);
+                    $createdReplies[] = $rExtra;
+                }
+            }
+
+            // Dispatch asynchronous image optimization jobs
+            foreach ($createdReplies as $replyItem) {
+                if ($replyItem->isImageAttachment()) {
+                    \App\Jobs\OptimizeImageAttachmentJob::dispatch($replyItem->id);
+                } else {
+                    $replyItem->update(['attachment_processing_status' => 'none']);
+                }
+            }
 
             Log::info('Successfully created Ticket and initial Customer TicketReply from inbound email', [
                 'ticket_id'    => $ticket->id,
@@ -94,27 +210,62 @@ class CreateTicketFromInboundEmailAction
                 'message_id'   => $ticket->message_id,
             ]);
 
+            // Create AppNotification for all admins & agents
+            try {
+                $staff = User::whereIn('role', [Role::Admin->value, Role::Agent->value])->get();
+                foreach ($staff as $user) {
+                    \App\Models\AppNotification::create([
+                        'user_id' => $user->id,
+                        'title'   => "New Ticket #{$ticket->id}: {$ticket->subject}",
+                        'message' => "Created by {$ticket->sender_name} ({$senderEmail})",
+                        'link'    => route('tickets.show', $ticket),
+                        'type'    => 'ticket_created',
+                    ]);
+                }
+            } catch (\Throwable $notifEx) {
+                Log::warning('Failed to dispatch new ticket AppNotification', ['error' => $notifEx->getMessage()]);
+            }
+
             return $ticket;
         });
 
-        // 1. Dispatch Auto-Resolve to background queue so ticket creation is instant
-        try {
-            Log::info('Dispatching AI auto-resolve to background queue', ['ticket_id' => $ticket->id]);
-            AutoResolveTicketJob::dispatch($ticket);
-        } catch (\Throwable $autoEx) {
-            report($autoEx);
-            Log::warning('Failed to dispatch AI auto-resolve job', [
-                'ticket_id' => $ticket->id,
-                'error'     => $autoEx->getMessage(),
-            ]);
-        }
+        // Run AI Auto-Resolve and Classification
+        if ($syncJobs) {
+            try {
+                Log::info('Executing AI auto-resolve synchronously', ['ticket_id' => $ticket->id]);
+                AutoResolveTicketJob::dispatchSync($ticket);
+            } catch (\Throwable $autoEx) {
+                report($autoEx);
+                Log::warning('Failed synchronous AI auto-resolve job', [
+                    'ticket_id' => $ticket->id,
+                    'error'     => $autoEx->getMessage(),
+                ]);
+            }
 
-        // 2. Dispatch Classification to background queue so web response is instant (< 1.5s)
-        try {
-            Log::info('Dispatching AI classification to background queue', ['ticket_id' => $ticket->id]);
-            TicketClassificationJob::dispatch($ticket);
-        } catch (\Throwable $classifyEx) {
-            report($classifyEx);
+            try {
+                Log::info('Executing AI classification synchronously', ['ticket_id' => $ticket->id]);
+                TicketClassificationJob::dispatchSync($ticket);
+            } catch (\Throwable $classifyEx) {
+                report($classifyEx);
+            }
+        } else {
+            try {
+                Log::info('Dispatching AI auto-resolve to background queue', ['ticket_id' => $ticket->id]);
+                AutoResolveTicketJob::dispatch($ticket);
+            } catch (\Throwable $autoEx) {
+                report($autoEx);
+                Log::warning('Failed to dispatch AI auto-resolve job', [
+                    'ticket_id' => $ticket->id,
+                    'error'     => $autoEx->getMessage(),
+                ]);
+            }
+
+            try {
+                Log::info('Dispatching AI classification to background queue', ['ticket_id' => $ticket->id]);
+                TicketClassificationJob::dispatch($ticket);
+            } catch (\Throwable $classifyEx) {
+                report($classifyEx);
+            }
         }
 
         $ticket->refresh();

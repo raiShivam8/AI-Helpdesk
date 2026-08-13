@@ -56,6 +56,7 @@ class ImapService
         @ini_set('max_execution_time', '180');
         @ini_set('memory_limit', '512M');
 
+        $startTime = microtime(true);
         $lastUid = $this->getLastProcessedUid();
         Log::info('Starting IMAP email fetch process', [
             'only_unseen' => $onlyUnseen,
@@ -77,33 +78,33 @@ class ImapService
             $messages = [];
             if ($lastUid > 0) {
                 try {
-                    // Ultra-fast ID query: check UIDs first without downloading message bodies
+                    // Fast UID query
                     $uidList = $folder->query()->where("CUSTOM UID " . ($lastUid + 1) . ":*")->pluck('uid')->toArray();
                     $newUids = array_filter(array_map('intval', (array) $uidList), fn($u) => $u > $lastUid);
 
-                    if (empty($newUids)) {
-                        // Zero new emails exist — finish instantly in < 0.1s
-                        $execTimeMs = round((microtime(true) - $startTime) * 1000, 2);
-                        Log::info("IMAP fetch completed (0 new emails): {$execTimeMs}ms, lastUid: {$lastUid}");
-                        return [
-                            'count'             => 0,
-                            'last_uid'          => $lastUid,
-                            'execution_ms'      => $execTimeMs,
-                            'new_tickets_count' => 0,
-                        ];
+                    if (!empty($newUids)) {
+                        $targetUids = array_slice(array_values($newUids), 0, $limit);
+                        $messages   = $folder->query()->whereIn('UID', $targetUids)->setFetchOrder('asc')->get();
+                    } elseif ($onlyUnseen) {
+                        $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
                     }
-
-                    // Fetch ONLY the newly arrived message UIDs
-                    $targetUids = array_slice(array_values($newUids), 0, $limit);
-                    $messages   = $folder->query()->whereIn('UID', $targetUids)->setFetchOrder('asc')->get();
                 } catch (\Throwable $e) {
-                    Log::warning('IMAP fast UID search warning, falling back to unseen query: ' . $e->getMessage());
-                    $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
+                    Log::warning('IMAP fast UID search warning: ' . $e->getMessage());
+                    if ($onlyUnseen) {
+                        $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
+                    }
                 }
-            } elseif ($onlyUnseen) {
-                $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
             } else {
-                $messages = $folder->query()->all()->setFetchOrder('asc')->limit($limit)->get();
+                $messages = $folder->query()->unseen()->setFetchOrder('asc')->limit($limit)->get();
+            }
+
+            // Fallback to all() ONLY when explicitly requested ($onlyUnseen = false) and no messages found
+            if (!$onlyUnseen && (empty($messages) || (method_exists($messages, 'count') && $messages->count() === 0))) {
+                try {
+                    $messages = $folder->query()->all()->setFetchOrder('desc')->limit($limit)->get();
+                } catch (\Throwable $allEx) {
+                    Log::warning('IMAP fallback to all messages failed: ' . $allEx->getMessage());
+                }
             }
 
             $count = 0;
@@ -118,7 +119,17 @@ class ImapService
                         // ignore UID extraction error
                     }
 
-                    if ($lastUid > 0 && $uid > 0 && $uid <= $lastUid) {
+                    // 1. Check if Message-ID already exists in database (prevent duplicate ticket creation)
+                    $msgId = $this->extractMessageId($message);
+                    if (!empty($msgId) && $this->isDuplicateMessage($msgId)) {
+                        Log::info('Skipping IMAP email: Duplicate Message-ID already processed.', [
+                            'message_id' => $msgId,
+                            'uid'        => $uid,
+                        ]);
+                        $message->setFlag('Seen');
+                        if ($uid > $maxUid) {
+                            $maxUid = $uid;
+                        }
                         continue;
                     }
 
@@ -344,18 +355,39 @@ class ImapService
         }
 
         $body = '';
+        $bodyHtml = null;
         try {
-            if (method_exists($message, 'hasTextBody') && $message->hasTextBody()) {
-                $body = $this->cleanEmailBody((string) $message->getTextBody());
+            if (method_exists($message, 'hasHTMLBody')) {
+                try {
+                    if ($message->hasHTMLBody()) {
+                        $bodyHtml = (string) $message->getHTMLBody();
+                    }
+                } catch (\Throwable $hEx) {
+                    // HTML body extraction ignored if method unmocked
+                }
             }
 
-            if (empty($body) && method_exists($message, 'hasHTMLBody') && $message->hasHTMLBody()) {
-                $body = $this->cleanEmailBody((string) $message->getHTMLBody());
+            if (method_exists($message, 'hasTextBody')) {
+                try {
+                    if ($message->hasTextBody()) {
+                        $body = $this->cleanEmailBody((string) $message->getTextBody());
+                    }
+                } catch (\Throwable $tEx) {
+                    // Text body extraction ignored if method unmocked
+                }
+            }
+
+            if (empty($body) && !empty($bodyHtml)) {
+                $body = $this->cleanEmailBody($bodyHtml);
             }
 
             if (empty($body)) {
-                $rawFallback = (string) ($message->getTextBody() ?? '');
-                $body = $this->cleanEmailBody($rawFallback);
+                try {
+                    $rawFallback = (string) ($message->getTextBody() ?? '');
+                    $body = $this->cleanEmailBody($rawFallback);
+                } catch (\Throwable $fEx) {
+                    // Fallback ignored
+                }
             }
         } catch (\Throwable $e) {
             $body = '(No content)';
@@ -380,18 +412,238 @@ class ImapService
         }
 
         $attachments = [];
+        $cidMap = [];
         try {
-            if (method_exists($message, 'hasAttachments') && $message->hasAttachments()) {
-                foreach ($message->getAttachments() as $attachment) {
-                    $attachments[] = [
-                        'name' => $attachment->getName(),
-                        'mime' => $attachment->getMimeType(),
-                        'size' => $attachment->getSize(),
-                    ];
+            $rawParts = [];
+            
+            // 1. Collect parts from getAttachments()
+            if (method_exists($message, 'getAttachments')) {
+                try {
+                    $atts = $message->getAttachments();
+                    if (is_iterable($atts)) {
+                        foreach ($atts as $att) {
+                            $rawParts[] = $att;
+                        }
+                    }
+                } catch (\Throwable $attEx) {
+                    Log::warning('IMAP getAttachments iterator warning: ' . $attEx->getMessage());
+                }
+            }
+
+            // 2. Also collect parts from getParts() (captures inline image parts in Apple Mail, Outlook, Gmail apps)
+            if (method_exists($message, 'getParts')) {
+                try {
+                    $parts = $message->getParts();
+                    if (is_iterable($parts)) {
+                        foreach ($parts as $part) {
+                            $pMime = '';
+                            if (method_exists($part, 'getMimeType')) {
+                                $pMime = strtolower((string) $part->getMimeType());
+                            } elseif (isset($part->mime)) {
+                                $pMime = strtolower((string) $part->mime);
+                            }
+                            
+                            // Skip plain text and main HTML body parts
+                            if (in_array($pMime, ['text/plain', 'text/html', 'multipart/mixed', 'multipart/alternative', 'multipart/related'], true)) {
+                                continue;
+                            }
+
+                            $rawParts[] = $part;
+                        }
+                    }
+                } catch (\Throwable $partEx) {
+                    Log::warning('IMAP getParts iterator warning: ' . $partEx->getMessage());
+                }
+            }
+
+            $processedPaths = [];
+
+            foreach ($rawParts as $attachment) {
+                try {
+                    $name = null;
+                    if (method_exists($attachment, 'getName')) {
+                        $name = $attachment->getName();
+                    } elseif (isset($attachment->name)) {
+                        $name = $attachment->name;
+                    } elseif (isset($attachment->filename)) {
+                        $name = $attachment->filename;
+                    }
+
+                    $mime = null;
+                    if (method_exists($attachment, 'getMimeType')) {
+                        $mime = $attachment->getMimeType();
+                    } elseif (isset($attachment->mime)) {
+                        $mime = $attachment->mime;
+                    }
+                    $mime = strtolower(trim($mime ?? ''));
+                    if (empty($mime)) {
+                        $mime = 'application/octet-stream';
+                    }
+
+                    // Deduce missing extension from mime type
+                    $ext = strtolower(pathinfo($name ?? '', PATHINFO_EXTENSION));
+                    if (empty($ext)) {
+                        $ext = match ($mime) {
+                            'image/jpeg', 'image/jpg' => 'jpg',
+                            'image/png'               => 'png',
+                            'image/gif'               => 'gif',
+                            'image/webp'              => 'webp',
+                            'image/svg+xml'           => 'svg',
+                            'image/bmp'               => 'bmp',
+                            'application/pdf'         => 'pdf',
+                            default                   => '',
+                        };
+                    }
+
+                    $name = $name ?: 'attachment_' . uniqid();
+                    if (!empty($ext) && !str_ends_with(strtolower($name), '.' . $ext)) {
+                        $name .= '.' . $ext;
+                    }
+
+                    $extension = !empty($ext) ? $ext : (pathinfo($name, PATHINFO_EXTENSION) ?: 'jpg');
+                    $safeFilename = \Illuminate\Support\Str::slug(pathinfo($name, PATHINFO_FILENAME)) ?: 'image';
+                    $fileNameOnDisk = uniqid() . '_' . $safeFilename . '.' . $extension;
+                    $tmpFolder = storage_path('app/public/attachments');
+
+                    if (!file_exists($tmpFolder)) {
+                        mkdir($tmpFolder, 0777, true);
+                    }
+
+                    $fullSavedPath = $tmpFolder . '/' . $fileNameOnDisk;
+
+                    // 1. Primary: Save directly using Webklex built-in saver (handles base64, 8bit binary & QP)
+                    try {
+                        if (method_exists($attachment, 'save')) {
+                            $attachment->save($tmpFolder, $fileNameOnDisk);
+                        }
+                    } catch (\Throwable $saveEx) {
+                        Log::warning('IMAP attachment save method error: ' . $saveEx->getMessage());
+                    }
+
+                    // 2. Fallback: If save() did not create the file, try getContent() or get()
+                    if (!file_exists($fullSavedPath) || filesize($fullSavedPath) === 0) {
+                        $content = null;
+                        try {
+                            if (method_exists($attachment, 'getContent')) {
+                                $content = $attachment->getContent();
+                            }
+                        } catch (\Throwable $e) {}
+
+                        if (empty($content) && isset($attachment->content)) {
+                            $content = $attachment->content;
+                        }
+
+                        if (!empty($content) && is_string($content)) {
+                            \Illuminate\Support\Facades\Storage::disk('public')->put('attachments/' . $fileNameOnDisk, $content);
+                        }
+                    }
+
+                    $storagePath = 'attachments/' . $fileNameOnDisk;
+
+                    if (file_exists($fullSavedPath) && filesize($fullSavedPath) > 0) {
+                        $publicUrl = asset('storage/' . $storagePath);
+
+                        $attachments[] = [
+                            'name' => $name,
+                            'mime' => $mime,
+                            'path' => $storagePath,
+                            'url'  => $publicUrl,
+                        ];
+
+                        // Extract Content-ID for CID inline images
+                        $contentId = null;
+                        if (method_exists($attachment, 'getContentId')) {
+                            try { $contentId = $attachment->getContentId(); } catch (\Throwable $e) {}
+                        }
+                        if (empty($contentId) && isset($attachment->id)) {
+                            $contentId = $attachment->id;
+                        }
+                        if (empty($contentId) && method_exists($attachment, 'getHeader')) {
+                            try {
+                                $headerObj = $attachment->getHeader();
+                                if ($headerObj) {
+                                    $cidHeader = $headerObj->get('content-id')?->first() 
+                                              ?? $headerObj->get('content-id')
+                                              ?? $headerObj->get('Content-ID');
+                                    $contentId = (string) $cidHeader;
+                                }
+                            } catch (\Throwable $e) {}
+                        }
+
+                        if (!empty($contentId)) {
+                            $cleanCid = trim((string) $contentId, '<>');
+                            $cidMap[$cleanCid] = $publicUrl;
+                            $cidNoHost = explode('@', $cleanCid)[0];
+                            $cidMap[$cidNoHost] = $publicUrl;
+                        }
+
+                        if (!empty($name)) {
+                            $cidMap[$name] = $publicUrl;
+                            $cidMap[pathinfo($name, PATHINFO_FILENAME)] = $publicUrl;
+                        }
+                    }
+                } catch (\Throwable $attEx) {
+                    Log::warning('Failed to save email attachment during IMAP parse: ' . $attEx->getMessage());
                 }
             }
         } catch (\Throwable $e) {
             // Ignore attachment extraction errors
+        }
+
+        // Replace inline cid: references in HTML body with actual public URLs
+        if (!empty($bodyHtml) && !empty($cidMap)) {
+            foreach ($cidMap as $cidKey => $url) {
+                if (empty($cidKey)) continue;
+                $bodyHtml = str_replace([
+                    'cid:' . $cidKey,
+                    'cid:<' . $cidKey . '>',
+                    'cid:' . urlencode($cidKey),
+                    'src="cid:' . $cidKey . '"',
+                    "src='cid:" . $cidKey . "'",
+                ], [
+                    $url,
+                    $url,
+                    $url,
+                    'src="' . $url . '"',
+                    "src='" . $url . "'",
+                ], $bodyHtml);
+            }
+        }
+
+        // Catch-all fallback for any unmapped cid: images using available extracted attachments
+        if (!empty($bodyHtml) && !empty($attachments) && preg_match_all('/src=["\']cid:([^"\'\s>]+)["\']/i', $bodyHtml, $cidMatches, PREG_SET_ORDER)) {
+            foreach ($cidMatches as $index => $match) {
+                $fallbackAtt = $attachments[$index] ?? $attachments[0] ?? null;
+                if ($fallbackAtt && !empty($fallbackAtt['url'])) {
+                    $bodyHtml = str_replace($match[0], 'src="' . $fallbackAtt['url'] . '"', $bodyHtml);
+                }
+            }
+        }
+
+        // Convert base64 inline images in body_html to stored public files
+        if (!empty($bodyHtml) && preg_match_all('/src=["\']data:image\/([a-zA-Z0-9\+\-]+);base64,([^"\'\s>]+)["\']/i', $bodyHtml, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                try {
+                    $imgType = strtolower($match[1]);
+                    $base64Data = base64_decode($match[2]);
+                    if (!empty($base64Data)) {
+                        $b64Filename = 'attachments/b64_' . uniqid() . '.' . ($imgType === 'jpeg' ? 'jpg' : $imgType);
+                        \Illuminate\Support\Facades\Storage::disk('public')->put($b64Filename, $base64Data);
+                        $b64Url = asset('storage/' . $b64Filename);
+
+                        $bodyHtml = str_replace($match[0], 'src="' . $b64Url . '"', $bodyHtml);
+
+                        $attachments[] = [
+                            'name' => 'inline_image.' . $imgType,
+                            'mime' => 'image/' . $imgType,
+                            'path' => $b64Filename,
+                            'url'  => $b64Url,
+                        ];
+                    }
+                } catch (\Throwable $b64Ex) {
+                    Log::warning('Failed to parse base64 image in email body: ' . $b64Ex->getMessage());
+                }
+            }
         }
 
         $messageId = $this->extractMessageId($message);
@@ -402,6 +654,7 @@ class ImapService
             'sender_name'   => $senderName,
             'subject'       => $subject,
             'body'          => $body,
+            'body_html'     => $bodyHtml,
             'received_date' => $receivedDate ?? now(),
             'attachments'   => $attachments,
         ];

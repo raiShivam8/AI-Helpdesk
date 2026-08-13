@@ -62,12 +62,14 @@ class DashboardController extends Controller
         }
 
         // ── Chart data: tickets created per day for last 14 days ──────────────
+        // Use DATE() SQL comparison instead of whereBetween with Carbon objects
+        // (Carbon objects don't compare correctly to ISO-format timestamps in SQLite)
 
-        $today = now()->startOfDay();
-        $start = now()->subDays(13)->startOfDay();
+        $startDateStr = now()->subDays(13)->format('Y-m-d');
+        $endDateStr   = now()->format('Y-m-d');
 
         $rawCounts = (clone $baseQuery)
-            ->whereBetween('created_at', [$start, $today->copy()->endOfDay()])
+            ->whereRaw("DATE(created_at) >= ?  AND DATE(created_at) <= ?", [$startDateStr, $endDateStr])
             ->selectRaw("DATE(created_at) AS ticket_date, COUNT(*) AS total")
             ->groupBy('ticket_date')
             ->orderBy('ticket_date')
@@ -78,9 +80,9 @@ class DashboardController extends Controller
         $chartData   = [];
 
         for ($i = 13; $i >= 0; $i--) {
-            $date           = now()->subDays($i)->format('Y-m-d');
-            $chartLabels[]  = now()->subDays($i)->format('M j');
-            $chartData[]    = (int) ($rawCounts[$date] ?? 0);
+            $date          = now()->subDays($i)->format('Y-m-d');
+            $chartLabels[] = now()->subDays($i)->format('M j');
+            $chartData[]   = (int) ($rawCounts[$date] ?? 0);
         }
 
         // ── Category & Status Breakdown ──────────────────────────────────────
@@ -124,9 +126,10 @@ class DashboardController extends Controller
         }
 
         // ── Recent Tickets (Paginated 8 per page: Page 1 shows tickets 1 to 8) ──
+        // Eager-load 'replies' to avoid N+1 queries from the attachment badge check in blade
         $tickets = (clone $baseQuery)
-            ->with('assignedAgent')
-            ->orderBy('id', 'asc')
+            ->with(['assignedAgent', 'replies'])
+            ->orderBy('id', 'desc')
             ->paginate(8)
             ->withQueryString();
 

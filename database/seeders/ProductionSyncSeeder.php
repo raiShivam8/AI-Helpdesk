@@ -12,10 +12,10 @@ class ProductionSyncSeeder extends Seeder
     {
         Schema::disableForeignKeyConstraints();
 
-        DB::table('app_notifications')->truncate();
-        DB::table('ticket_replies')->truncate();
-        DB::table('tickets')->truncate();
-        DB::table('users')->truncate();
+        $ticketColumns = Schema::getColumnListing('tickets');
+        $userColumns = Schema::getColumnListing('users');
+        $replyColumns = Schema::getColumnListing('ticket_replies');
+        $notifColumns = Schema::getColumnListing('app_notifications');
 
         $users = array (
   0 => 
@@ -2033,20 +2033,29 @@ I am facing an issue regarding: General issue with account login (#134). Please 
         $notifications = array (
 );
 
+        DB::table('app_notifications')->truncate();
+        DB::table('ticket_replies')->truncate();
+        DB::table('tickets')->truncate();
+        DB::table('users')->truncate();
+
         foreach ($users as $user) {
-            DB::table('users')->insert($user);
+            $data = array_intersect_key($user, array_flip($userColumns));
+            DB::table('users')->insert($data);
         }
 
         foreach ($tickets as $ticket) {
-            DB::table('tickets')->insert($ticket);
+            $data = array_intersect_key($ticket, array_flip($ticketColumns));
+            DB::table('tickets')->insert($data);
         }
 
         foreach ($replies as $reply) {
-            DB::table('ticket_replies')->insert($reply);
+            $data = array_intersect_key($reply, array_flip($replyColumns));
+            DB::table('ticket_replies')->insert($data);
         }
 
         foreach ($notifications as $notif) {
-            DB::table('app_notifications')->insert($notif);
+            $data = array_intersect_key($notif, array_flip($notifColumns));
+            DB::table('app_notifications')->insert($data);
         }
 
         Schema::enableForeignKeyConstraints();

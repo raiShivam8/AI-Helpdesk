@@ -59,6 +59,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             AiAgentSeeder::class,
+            ProductionSyncSeeder::class,
         ]);
     }
 }

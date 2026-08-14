@@ -25,8 +25,15 @@ class DashboardController extends Controller
             if ($selectedAgentId === 'unassigned') {
                 $baseQuery->whereNull('assigned_agent_id');
             } else if ($selectedAgent && !$selectedAgent->isAdmin()) {
-                // Filter specifically for non-admin agents; Admins oversee overall company view
-                $baseQuery->where('assigned_agent_id', $selectedAgentId);
+                $aiAgent = User::withTrashed()->where('email', \Database\Seeders\AiAgentSeeder::EMAIL)->first();
+                if ($aiAgent && (int) $selectedAgentId === (int) $aiAgent->id) {
+                    $baseQuery->where(function ($q) use ($selectedAgentId) {
+                        $q->where('assigned_agent_id', $selectedAgentId)
+                          ->orWhereNotNull('ai_resolved_at');
+                    });
+                } else {
+                    $baseQuery->where('assigned_agent_id', $selectedAgentId);
+                }
             }
         }
 
@@ -95,16 +102,28 @@ class DashboardController extends Controller
         $categoryLabels = [];
         $categoryData   = [];
 
+        $categoryEnumMap = [];
         foreach (\App\Enums\TicketCategory::cases() as $cat) {
-            $val   = $cat->value;
-            $count = (int) ($rawCategoryCounts[$val] ?? 0);
-            if ($count > 0 || empty($rawCategoryCounts)) {
-                $categoryLabels[] = $val;
-                $categoryData[]   = $count;
-            }
+            $categoryEnumMap[$cat->value] = $cat->label();
         }
 
-        if (array_sum($categoryData) === 0) {
+        foreach ($rawCategoryCounts as $rawCategory => $count) {
+            $count = (int) $count;
+            if ($count <= 0) continue;
+
+            if ($rawCategory === null || $rawCategory === '') {
+                $label = 'Uncategorized';
+            } elseif (isset($categoryEnumMap[$rawCategory])) {
+                $label = $categoryEnumMap[$rawCategory];
+            } else {
+                $label = ucwords(str_replace(['_', '-'], ' ', (string) $rawCategory));
+            }
+
+            $categoryLabels[] = $label;
+            $categoryData[]   = $count;
+        }
+
+        if (empty($categoryLabels)) {
             $categoryLabels = ['Technical Question', 'Refund Request', 'General Support', 'Account Issues'];
             $categoryData   = [0, 0, 0, 0];
         }

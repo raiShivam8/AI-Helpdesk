@@ -2038,6 +2038,9 @@ I am facing an issue regarding: General issue with account login (#134). Please 
         }
 
         foreach ($tickets as $ticket) {
+            if (!empty($ticket['ai_resolved_at']) && empty($ticket['assigned_agent_id'])) {
+                $ticket['assigned_agent_id'] = 3;
+            }
             DB::table('tickets')->insert($ticket);
         }
 

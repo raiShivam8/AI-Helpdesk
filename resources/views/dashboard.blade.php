@@ -142,10 +142,10 @@
     </div>
 
     {{-- ═══ Charts Section ═══ --}}
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
 
-        {{-- Left: 14-Day Line Trend Chart (wider) --}}
-        <div class="card p-5 lg:col-span-3">
+        {{-- Left: 14-Day Line Trend Chart --}}
+        <div class="card p-5">
             <div class="flex items-center justify-between gap-3 mb-4">
                 <div>
                     <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">14-Day Ticket Volume</h2>
@@ -172,7 +172,7 @@
         </div>
 
         {{-- Right: Category / Status Donut Chart --}}
-        <div class="card p-5 lg:col-span-2">
+        <div class="card p-5">
             <div class="flex items-center justify-between gap-2 mb-4">
                 <div>
                     <h2 id="pieChartTitleText" class="text-sm font-semibold text-slate-700 dark:text-slate-200">Distribution</h2>

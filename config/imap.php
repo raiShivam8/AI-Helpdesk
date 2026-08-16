@@ -28,7 +28,7 @@ return [
             'port'          => env('IMAP_PORT', 993),
             'protocol'      => env('IMAP_PROTOCOL', 'imap'),
             'encryption'    => env('IMAP_ENCRYPTION', 'ssl'),
-            'validate_cert' => env('IMAP_VALIDATE_CERT', true),
+            'validate_cert' => env('IMAP_VALIDATE_CERT', false),
             'username'      => env('IMAP_USERNAME', env('MAIL_USERNAME')),
             'password'      => env('IMAP_PASSWORD', env('MAIL_PASSWORD')),
             'authentication' => env('IMAP_AUTHENTICATION', null),

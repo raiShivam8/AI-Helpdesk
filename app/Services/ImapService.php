@@ -67,6 +67,13 @@ class ImapService
         try {
             $client = $client ?? Client::account('default');
 
+            $username = config('imap.accounts.default.username');
+            $password = config('imap.accounts.default.password');
+            if (empty($username) || empty($password)) {
+                Log::error('IMAP fetch aborted: IMAP_USERNAME or IMAP_PASSWORD is not set in environment variables.');
+                throw new \RuntimeException('IMAP credentials missing. Please configure MAIL_USERNAME and MAIL_PASSWORD (or IMAP_USERNAME / IMAP_PASSWORD) in your Railway environment variables.');
+            }
+
             if (!$client->isConnected()) {
                 $client->connect();
             }

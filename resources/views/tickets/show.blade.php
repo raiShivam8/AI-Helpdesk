@@ -44,25 +44,27 @@
             </div>
 
             {{-- Try AI Resolve action / AI Resolved badge --}}
-            <div class="ml-auto flex items-center gap-2 shrink-0">
+            <div class="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
                 @if($ticket->ai_resolved_at === null && ($ticket->status === \App\Enums\TicketStatus::Open || $ticket->status === \App\Enums\TicketStatus::New))
                     <form method="POST" action="{{ route('tickets.try-ai-resolve', $ticket) }}">
                         @csrf
                         <button type="submit"
-                                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm transition duration-150">
+                                class="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-sm transition duration-150"
+                                title="Try AI Auto-Resolve">
                             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l-1.813-5.096L2.091 14.09 7.187 13.28 9 8.187l1.813 5.096 5.096 1.813-5.096 1.813z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4m-2-2h4" />
                             </svg>
-                            Try AI Resolve
+                            <span>AI Resolve</span>
                         </button>
                     </form>
                 @elseif($ticket->ai_resolved_at !== null)
                     <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 ring-1 ring-purple-200 dark:ring-purple-700/50">
-                        <svg class="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <svg class="w-3.5 h-3.5 text-purple-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
-                        Resolved by AI
+                        <span class="hidden sm:inline">Resolved by AI</span>
+                        <span class="sm:hidden">AI Done</span>
                     </span>
                 @endif
 
@@ -71,12 +73,12 @@
                     @csrf
                     @method('DELETE')
                     <button type="submit"
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800 transition duration-150"
+                            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-300 border border-red-200 dark:border-red-800 transition duration-150"
                             title="Delete Ticket Permanently">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        Delete
+                        <span class="hidden sm:inline">Delete</span>
                     </button>
                 </form>
             </div>

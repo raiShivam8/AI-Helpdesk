@@ -79,9 +79,9 @@
 
             <div class="flex flex-wrap items-end gap-3">
                 {{-- Status --}}
-                <div class="flex-1 min-w-[160px]">
+                <div class="w-full sm:w-auto sm:flex-1 min-w-[130px]">
                     <label for="status" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Status</label>
-                    <select name="status" id="status" @change="$refs.filterForm.submit()" class="form-select">
+                    <select name="status" id="status" @change="$refs.filterForm.submit()" class="form-select w-full">
                         <option value="">All Statuses</option>
                         @foreach(\App\Enums\TicketStatus::cases() as $st)
                             <option value="{{ $st->value }}" {{ $status === $st->value ? 'selected' : '' }}>
@@ -92,9 +92,9 @@
                 </div>
 
                 {{-- Category --}}
-                <div class="flex-1 min-w-[160px]">
+                <div class="w-full sm:w-auto sm:flex-1 min-w-[130px]">
                     <label for="category" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
-                    <select name="category" id="category" @change="$refs.filterForm.submit()" class="form-select">
+                    <select name="category" id="category" @change="$refs.filterForm.submit()" class="form-select w-full">
                         <option value="">All Categories</option>
                         @foreach(\App\Enums\TicketCategory::cases() as $cat)
                             <option value="{{ $cat->value }}" {{ $category === $cat->value ? 'selected' : '' }}>
@@ -105,9 +105,9 @@
                 </div>
 
                 {{-- Agent --}}
-                <div class="flex-1 min-w-[160px]">
+                <div class="w-full sm:w-auto sm:flex-1 min-w-[130px]">
                     <label for="agent" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Assigned Agent</label>
-                    <select name="agent" id="agent" @change="$refs.filterForm.submit()" class="form-select">
+                    <select name="agent" id="agent" @change="$refs.filterForm.submit()" class="form-select w-full">
                         <option value="">All Agents</option>
                         <option value="unassigned" {{ $agent === 'unassigned' ? 'selected' : '' }}>Unassigned</option>
                         @foreach($agents as $a)
@@ -119,15 +119,15 @@
                 </div>
 
                 {{-- Actions --}}
-                <div class="flex items-center gap-2 shrink-0">
-                    <button type="submit" class="btn-primary">
+                <div class="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                    <button type="submit" class="btn-primary flex-1 sm:flex-none justify-center">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                         </svg>
                         Filter
                     </button>
                     @if($hasActiveFilters)
-                        <a href="{{ route('tickets.index', ['sort' => $sort, 'direction' => $direction]) }}" class="btn-secondary">
+                        <a href="{{ route('tickets.index', ['sort' => $sort, 'direction' => $direction]) }}" class="btn-secondary flex-1 sm:flex-none justify-center">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>

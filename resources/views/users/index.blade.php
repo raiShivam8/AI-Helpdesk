@@ -8,12 +8,13 @@
             <button
                 x-data=""
                 x-on:click.prevent="$dispatch('open-modal', 'create-user-modal')"
-                class="btn-primary"
+                class="btn-primary shrink-0"
             >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-                Add User
+                <span class="hidden sm:inline">Add User</span>
+                <span class="sm:hidden">Add</span>
             </button>
         </div>
     </x-slot>

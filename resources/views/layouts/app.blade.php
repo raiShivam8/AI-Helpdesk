@@ -112,7 +112,117 @@
     </head>
     <body class="font-sans antialiased transition-colors duration-300"
           style="background-color: var(--bg-page); color: var(--text-primary);"
-          x-data="{ sidebarOpen: false }">
+          x-data="{
+              sidebarOpen: false,
+              open: false,
+              tab: 'all',
+              notifications: [],
+              unreadCount: 0,
+              loading: false,
+              soundEnabled: true,
+              lastUnreadCount: 0,
+              toast: { show: false, title: '', message: '', link: '' },
+              showToast(title, message, link) {
+                  this.toast.title = title;
+                  this.toast.message = message;
+                  this.toast.link = link;
+                  this.toast.show = true;
+                  this.playChime();
+                  setTimeout(() => { this.toast.show = false; }, 8000);
+              },
+              playChime() {
+                  if (!this.soundEnabled) return;
+                  try {
+                      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                      const osc = ctx.createOscillator();
+                      const gain = ctx.createGain();
+                      osc.type = 'sine';
+                      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+                      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                      osc.connect(gain);
+                      gain.connect(ctx.destination);
+                      osc.start();
+                      osc.stop(ctx.currentTime + 0.3);
+                  } catch (e) {}
+              },
+              fetchNotifications() {
+                  this.loading = true;
+                  fetch('{{ route('notifications.index') }}')
+                      .then(res => res.json())
+                      .then(data => {
+                          const newCount = data.unread_count || 0;
+                          if (this.lastUnreadCount > 0 && newCount > this.lastUnreadCount) {
+                              const latestNotif = (data.notifications || []).find(n => !n.read_at) || (data.notifications || [])[0];
+                              if (latestNotif) {
+                                  this.showToast(latestNotif.title, latestNotif.message, latestNotif.link);
+                              } else {
+                                  this.playChime();
+                              }
+                          }
+                          this.lastUnreadCount = newCount;
+                          this.notifications = data.notifications || [];
+                          this.unreadCount = newCount;
+                          this.loading = false;
+                      })
+                      .catch(() => { this.loading = false; });
+              },
+              autoSyncImap() {
+                  fetch('{{ route('tickets.sync-emails') }}', {
+                      method: 'POST',
+                      headers: {
+                          'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                          'Accept': 'application/json',
+                          'X-Requested-With': 'XMLHttpRequest'
+                      }
+                  })
+                  .then(res => res.json())
+                  .then(data => {
+                      if (data.success && data.count > 0) {
+                          this.fetchNotifications();
+                          this.showToast('📩 New Ticket Received!', `Imported ${data.count} new customer support ticket(s).`, '{{ route('dashboard') }}');
+                          if (window.location.pathname === '/dashboard' || window.location.pathname === '/' || window.location.pathname.includes('/tickets')) {
+                              setTimeout(() => { window.location.reload(); }, 2500);
+                          }
+                      }
+                  })
+                  .catch(() => {});
+              },
+              get filteredNotifications() {
+                  if (this.tab === 'unread') {
+                      return this.notifications.filter(n => !n.read_at);
+                  }
+                  return this.notifications;
+              },
+              markRead(id, link, event) {
+                  if (event) event.stopPropagation();
+                  fetch('/notifications/' + id + '/read', {
+                      method: 'POST',
+                      headers: {
+                          'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json'
+                      }
+                  }).then(() => {
+                      this.fetchNotifications();
+                      if (link) window.location.href = link;
+                  });
+              },
+              markAllRead() {
+                  fetch('{{ route('notifications.read-all') }}', {
+                      method: 'POST',
+                      headers: {
+                          'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json'
+                      }
+                  }).then(() => {
+                      this.fetchNotifications();
+                  });
+              }
+          }"
+          x-init="fetchNotifications(); autoSyncImap(); setInterval(() => fetchNotifications(), 12000); setInterval(() => autoSyncImap(), 15000);">
 
         <div class="flex min-h-screen relative overflow-x-hidden">
 
@@ -189,80 +299,7 @@
 
                         {{-- ═══ Production Level Real-Time Notification Dropdown ═══ --}}
                         @auth
-                        <div x-data="{
-                            open: false,
-                            tab: 'all',
-                            notifications: [],
-                            unreadCount: 0,
-                            loading: false,
-                            soundEnabled: true,
-                            lastUnreadCount: 0,
-                            playChime() {
-                                if (!this.soundEnabled) return;
-                                try {
-                                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                                    const osc = ctx.createOscillator();
-                                    const gain = ctx.createGain();
-                                    osc.type = 'sine';
-                                    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-                                    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
-                                    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-                                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-                                    osc.connect(gain);
-                                    gain.connect(ctx.destination);
-                                    osc.start();
-                                    osc.stop(ctx.currentTime + 0.3);
-                                } catch (e) {}
-                            },
-                            fetchNotifications() {
-                                this.loading = true;
-                                fetch('{{ route('notifications.index') }}')
-                                    .then(res => res.json())
-                                    .then(data => {
-                                        const newCount = data.unread_count || 0;
-                                        if (this.lastUnreadCount > 0 && newCount > this.lastUnreadCount) {
-                                            this.playChime();
-                                        }
-                                        this.lastUnreadCount = newCount;
-                                        this.notifications = data.notifications || [];
-                                        this.unreadCount = newCount;
-                                        this.loading = false;
-                                    })
-                                    .catch(() => { this.loading = false; });
-                            },
-                            get filteredNotifications() {
-                                if (this.tab === 'unread') {
-                                    return this.notifications.filter(n => !n.read_at);
-                                }
-                                return this.notifications;
-                            },
-                            markRead(id, link, event) {
-                                if (event) event.stopPropagation();
-                                fetch('/notifications/' + id + '/read', {
-                                    method: 'POST',
-                                    headers: {
-                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                        'Content-Type': 'application/json',
-                                        'Accept': 'application/json'
-                                    }
-                                }).then(() => {
-                                    this.fetchNotifications();
-                                    if (link) window.location.href = link;
-                                });
-                            },
-                            markAllRead() {
-                                fetch('{{ route('notifications.read-all') }}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                        'Content-Type': 'application/json',
-                                        'Accept': 'application/json'
-                                    }
-                                }).then(() => {
-                                    this.fetchNotifications();
-                                });
-                            }
-                        }" x-init="fetchNotifications(); setInterval(() => fetchNotifications(), 12000);" class="relative">
+                        <div class="relative">
 
                             {{-- Bell Trigger Button --}}
                             <button @click="open = !open" type="button" class="relative p-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shrink-0" aria-label="View notifications">
@@ -428,6 +465,42 @@
                     {{ $slot }}
                 </main>
 
+            </div>
+        </div>
+
+        {{-- ═══ Floating Real-Time Ticket Notification Toast Popup ═══ --}}
+        <div x-show="toast.show"
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:translate-x-4 scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:translate-x-0 scale-100"
+             x-transition:leave="transition ease-in duration-200 transform"
+             x-transition:leave-start="opacity-100 translate-y-0 sm:translate-x-0 scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:translate-x-4 scale-95"
+             class="fixed bottom-5 right-5 z-50 max-w-md w-full bg-white dark:bg-slate-900 border-2 border-indigo-500 dark:border-indigo-400 rounded-2xl shadow-2xl p-4 backdrop-blur-xl flex items-start gap-3.5 ring-4 ring-indigo-500/10"
+             x-cloak
+             style="display: none;">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md animate-bounce">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">📩 New Ticket Received!</span>
+                    <button @click="toast.show = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <h4 class="text-sm font-bold text-slate-900 dark:text-white mt-1 truncate" x-text="toast.title"></h4>
+                <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-2" x-text="toast.message"></p>
+                <div class="mt-2.5 flex items-center gap-2">
+                    <a :href="toast.link || '#'" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors">
+                        View Ticket →
+                    </a>
+                    <button @click="toast.show = false" class="px-2.5 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                        Dismiss
+                    </button>
+                </div>
             </div>
         </div>
 

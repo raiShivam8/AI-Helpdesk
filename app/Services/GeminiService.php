@@ -53,7 +53,7 @@ class GeminiService
 
         // Primary model and ordered fallback models for high demand / rate limit resilience
         $primaryModel = config('services.gemini.model', 'gemini-flash-latest');
-        $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-lite-latest']));
+        $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest']));
 
         $payload = array_merge([
             'contents' => [

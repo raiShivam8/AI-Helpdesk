@@ -456,6 +456,21 @@ class ImapService
                 }
             }
 
+            // 3. Deduplicate raw parts by object hash / identifier to prevent duplicate downloads & disk writes
+            $dedupedParts = [];
+            $seenPartKeys = [];
+            foreach ($rawParts as $partItem) {
+                $partKey = is_object($partItem) ? spl_object_hash($partItem) : null;
+                if ($partKey && in_array($partKey, $seenPartKeys, true)) {
+                    continue;
+                }
+                if ($partKey) {
+                    $seenPartKeys[] = $partKey;
+                }
+                $dedupedParts[] = $partItem;
+            }
+            $rawParts = $dedupedParts;
+
             $processedPaths = [];
 
             foreach ($rawParts as $attachment) {

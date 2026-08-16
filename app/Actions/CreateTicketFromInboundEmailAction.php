@@ -229,7 +229,7 @@ class CreateTicketFromInboundEmailAction
             return $ticket;
         });
 
-        // Run AI Auto-Resolve and Classification
+        // Run AI Auto-Resolve and Classification (Sync if requested, Async if queued)
         if ($syncJobs) {
             try {
                 Log::info('Executing AI auto-resolve synchronously', ['ticket_id' => $ticket->id]);
@@ -250,7 +250,7 @@ class CreateTicketFromInboundEmailAction
             }
         } else {
             try {
-                Log::info('Dispatching AI auto-resolve to background queue', ['ticket_id' => $ticket->id]);
+                Log::info('Dispatching AI auto-resolve job to background queue', ['ticket_id' => $ticket->id]);
                 AutoResolveTicketJob::dispatch($ticket);
             } catch (\Throwable $autoEx) {
                 report($autoEx);
@@ -261,7 +261,7 @@ class CreateTicketFromInboundEmailAction
             }
 
             try {
-                Log::info('Dispatching AI classification to background queue', ['ticket_id' => $ticket->id]);
+                Log::info('Dispatching AI classification job to background queue', ['ticket_id' => $ticket->id]);
                 TicketClassificationJob::dispatch($ticket);
             } catch (\Throwable $classifyEx) {
                 report($classifyEx);

@@ -99,26 +99,31 @@ class DashboardController extends Controller
             ->pluck('total', 'category')
             ->toArray();
 
-        $categoryLabels = [];
-        $categoryData   = [];
-
         $categoryEnumMap = [];
         foreach (\App\Enums\TicketCategory::cases() as $cat) {
             $categoryEnumMap[$cat->value] = $cat->label();
         }
 
+        $aggregatedCategories = [];
         foreach ($rawCategoryCounts as $rawCategory => $count) {
             $count = (int) $count;
             if ($count <= 0) continue;
 
-            if ($rawCategory === null || $rawCategory === '') {
+            $rawCategoryStr = trim((string) $rawCategory);
+            if ($rawCategory === null || $rawCategoryStr === '' || strtolower($rawCategoryStr) === 'undefined' || strtolower($rawCategoryStr) === 'null') {
                 $label = 'Uncategorized';
-            } elseif (isset($categoryEnumMap[$rawCategory])) {
-                $label = $categoryEnumMap[$rawCategory];
+            } elseif (isset($categoryEnumMap[$rawCategoryStr])) {
+                $label = $categoryEnumMap[$rawCategoryStr];
             } else {
-                $label = ucwords(str_replace(['_', '-'], ' ', (string) $rawCategory));
+                $label = ucwords(str_replace(['_', '-'], ' ', $rawCategoryStr));
             }
 
+            $aggregatedCategories[$label] = ($aggregatedCategories[$label] ?? 0) + $count;
+        }
+
+        $categoryLabels = [];
+        $categoryData   = [];
+        foreach ($aggregatedCategories as $label => $count) {
             $categoryLabels[] = $label;
             $categoryData[]   = $count;
         }
@@ -140,8 +145,17 @@ class DashboardController extends Controller
         foreach (\App\Enums\TicketStatus::cases() as $st) {
             $val   = $st->value;
             $count = (int) ($rawStatusCounts[$val] ?? 0);
-            $statusLabels[] = ucfirst($val);
-            $statusData[]   = $count;
+            if ($count > 0) {
+                $statusLabels[] = $st->label();
+                $statusData[]   = $count;
+            }
+        }
+
+        if (empty($statusLabels)) {
+            foreach (\App\Enums\TicketStatus::cases() as $st) {
+                $statusLabels[] = $st->label();
+                $statusData[]   = 0;
+            }
         }
 
         // ── Recent Tickets (Paginated 8 per page: Page 1 shows tickets 1 to 8) ──

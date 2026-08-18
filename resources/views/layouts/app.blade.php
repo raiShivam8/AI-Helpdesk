@@ -110,7 +110,7 @@
             }
         </style>
     </head>
-    <body class="font-sans antialiased transition-colors duration-300"
+    <body class="font-sans antialiased transition-colors duration-300 min-h-screen overflow-y-auto"
           style="background-color: var(--bg-page); color: var(--text-primary);"
           x-data="{
               sidebarOpen: false,
@@ -224,7 +224,7 @@
           }"
           x-init="fetchNotifications(); autoSyncImap(); setInterval(() => fetchNotifications(), 12000); setInterval(() => autoSyncImap(), 15000);">
 
-        <div class="flex min-h-screen relative overflow-x-hidden">
+        <div class="flex min-h-screen relative overflow-x-hidden overflow-y-auto">
 
             {{-- ════════ SIDEBAR ════════ --}}
             @include('layouts.navigation')

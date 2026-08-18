@@ -33,12 +33,14 @@
 
         <style>
             *, *::before, *::after { box-sizing: border-box; }
-            html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+            html, body { height: 100vh; max-height: 100vh; margin: 0; padding: 0; font-family: 'Inter', sans-serif; overflow: hidden; }
 
             /* ── Full-screen two-column layout ── */
             .auth-wrapper {
                 display: flex;
-                min-height: 100vh;
+                height: 100vh;
+                width: 100%;
+                overflow: hidden;
             }
 
             /* ── LEFT BRANDING PANEL ── */
@@ -49,9 +51,10 @@
                 flex-direction: column;
                 justify-content: center;
                 align-items: flex-start;
-                padding: 60px 64px;
+                padding: 40px 52px;
                 position: relative;
                 overflow: hidden;
+                height: 100vh;
             }
 
             /* Decorative blobs on left panel */
@@ -83,7 +86,9 @@
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
-                padding: 48px 40px;
+                padding: 24px 20px;
+                overflow: hidden;
+                height: 100vh;
             }
 
             .auth-card {
@@ -91,7 +96,7 @@
                 max-width: 420px;
                 background: #FFFFFF;
                 border-radius: 20px;
-                padding: 40px 40px 36px;
+                padding: 28px 32px 24px;
                 box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 40px rgba(99,102,241,0.10);
                 border: 1px solid rgba(99,102,241,0.10);
             }
@@ -156,16 +161,16 @@
             /* ── Right panel heading ── */
             .form-logo-wrap {
                 display: flex; align-items: center; gap: 11px;
-                margin-bottom: 24px;
+                margin-bottom: 14px;
             }
-            .form-logo-wrap img, .form-logo-wrap svg { width: 38px; height: 38px; border-radius: 10px; }
+            .form-logo-wrap img, .form-logo-wrap svg { width: 36px; height: 36px; border-radius: 10px; }
             .form-brand-name { font-size: 16px; font-weight: 700; color: #1E1B4B; }
             .form-brand-sub  { font-size: 11.5px; color: #6B7280; font-weight: 500; }
 
-            .form-heading { font-size: 22px; font-weight: 800; color: #111827; line-height: 1.25; }
-            .form-sub     { font-size: 13.5px; color: #6B7280; margin-top: 6px; line-height: 1.5; }
+            .form-heading { font-size: 20px; font-weight: 800; color: #111827; line-height: 1.25; }
+            .form-sub     { font-size: 13px; color: #6B7280; margin-top: 4px; line-height: 1.4; }
 
-            .divider { height: 1px; background: #F3F4F6; margin: 24px 0; }
+            .divider { height: 1px; background: #F3F4F6; margin: 14px 0; }
 
             /* Responsive: stack on small screens */
             @media (max-width: 800px) {

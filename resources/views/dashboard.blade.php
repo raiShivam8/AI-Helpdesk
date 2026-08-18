@@ -187,7 +187,7 @@
                     </button>
                 </div>
             </div>
-            <div style="position: relative; height: 240px; width: 100%;">
+            <div style="position: relative; height: 260px; width: 100%;">
                 <canvas id="ticketsPieChart"></canvas>
             </div>
         </div>
@@ -458,12 +458,13 @@
             function theme() {
                 const d = isDark();
                 return {
-                    tick:        d ? '#94a3b8' : '#64748b',
-                    grid:        d ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                    tooltipBg:   d ? '#1e293b' : '#ffffff',
-                    tooltipText: d ? '#f1f5f9' : '#0f172a',
-                    tooltipBdr:  d ? '#334155' : '#e2e8f0',
-                    ring:        d ? '#1e293b' : '#ffffff',
+                    tick:        d ? '#E2E8F0' : '#475569',
+                    legendText:  d ? '#FFFFFF' : '#0F172A',
+                    grid:        d ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    tooltipBg:   d ? '#1E293B' : '#FFFFFF',
+                    tooltipText: d ? '#FFFFFF' : '#0F172A',
+                    tooltipBdr:  d ? '#334155' : '#E2E8F0',
+                    ring:        d ? '#1C2333' : '#FFFFFF',
                 };
             }
 
@@ -605,6 +606,7 @@
                     if (pieSubTitleEl) pieSubTitleEl.textContent = 'Current status distribution';
                 }
 
+                const isMobile = window.innerWidth < 640;
                 pieChart = new Chart(pieCanvas, {
                     type: 'doughnut',
                     data: {
@@ -621,27 +623,42 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        cutout: '68%',
+                        cutout: '66%',
                         animation: { duration: 400, easing: 'easeInOutQuart' },
                         plugins: {
                             legend: {
                                 display: true,
-                                position: 'bottom',
+                                position: isMobile ? 'bottom' : 'right',
+                                align: 'center',
                                 labels: {
-                                    color: t.tick,
-                                    font: { size: 11, family: 'Inter, sans-serif' },
+                                    color: t.legendText,
+                                    font: { size: 11.5, family: 'Inter, sans-serif', weight: '600' },
                                     padding: 10,
                                     boxWidth: 10,
                                     usePointStyle: true,
                                     pointStyle: 'circle',
                                     generateLabels(chart) {
-                                        const orig  = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                                        const total = data.reduce((a, b) => a + b, 0);
-                                        return orig.map((item, i) => {
-                                            const v = data[i] || 0;
+                                        const chartLabels = chart.data.labels || [];
+                                        const chartData   = chart.data.datasets[0]?.data || [];
+                                        const chartColors = chart.data.datasets[0]?.backgroundColor || [];
+                                        const total       = chartData.reduce((a, b) => a + b, 0);
+                                        const textColor   = isDark() ? '#FFFFFF' : '#0F172A';
+
+                                        return chartLabels.map((labelName, i) => {
+                                            const v = chartData[i] || 0;
                                             const p = total > 0 ? Math.round((v / total) * 100) : 0;
-                                            item.text = `${item.text} — ${v} (${p}%)`;
-                                            return item;
+                                            const isHidden = typeof chart.getDataVisibility === 'function' ? !chart.getDataVisibility(i) : false;
+                                            return {
+                                                text: `${labelName} — ${v} (${p}%)`,
+                                                fillStyle: Array.isArray(chartColors) ? chartColors[i % chartColors.length] : chartColors,
+                                                strokeStyle: t.ring,
+                                                fontColor: textColor,
+                                                color: textColor,
+                                                lineWidth: 2,
+                                                hidden: isHidden,
+                                                index: i,
+                                                pointStyle: 'circle'
+                                            };
                                         });
                                     }
                                 }
@@ -655,7 +672,14 @@
                                 padding: 10,
                                 cornerRadius: 8,
                                 callbacks: {
-                                    label: ctx => `  ${ctx.raw} ticket${ctx.raw !== 1 ? 's' : ''}`
+                                    title: ctx => ctx[0]?.label || '',
+                                    label: ctx => {
+                                        const v = ctx.raw || 0;
+                                        const dsData = ctx.dataset.data || [];
+                                        const total = dsData.reduce((a, b) => a + b, 0);
+                                        const p = total > 0 ? Math.round((v / total) * 100) : 0;
+                                        return ` ${v} ticket${v !== 1 ? 's' : ''} (${p}%)`;
+                                    }
                                 }
                             }
                         }

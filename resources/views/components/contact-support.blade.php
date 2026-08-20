@@ -8,9 +8,9 @@
 @endphp
 
 @if ($variant === 'compact')
-    <div {{ $attributes->merge(['class' => 'text-xs sm:text-sm text-slate-600']) }}>
+    <div {{ $attributes->merge(['class' => 'text-xs sm:text-sm text-slate-600 dark:text-slate-400']) }}>
         Need help? Email us at
-        <a href="mailto:{{ $supportEmail }}" class="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors">
+        <a href="mailto:{{ $supportEmail }}" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline transition-colors">
             {{ $supportEmail }}
         </a>. Your email will automatically create a support ticket, and our AI or support team will respond as soon as possible.
     </div>
@@ -33,7 +33,7 @@
         </div>
     </div>
 @else
-    <div {{ $attributes->merge(['class' => 'rounded-xl border border-indigo-100 bg-indigo-50/70 p-5 text-slate-800 shadow-sm text-left']) }}>
+    <div {{ $attributes->merge(['class' => 'rounded-xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/70 dark:bg-indigo-950/40 p-5 text-slate-800 dark:text-slate-200 shadow-sm text-left']) }}>
         <div class="flex items-start gap-4">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -41,10 +41,10 @@
                 </svg>
             </div>
             <div>
-                <h4 class="font-semibold text-slate-900 text-base">Need Help & Support?</h4>
-                <p class="mt-1 text-sm text-slate-600 leading-relaxed">
+                <h4 class="font-semibold text-slate-900 dark:text-white text-base">Need Help & Support?</h4>
+                <p class="mt-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     Need help? Email us at
-                    <a href="mailto:{{ $supportEmail }}" class="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">
+                    <a href="mailto:{{ $supportEmail }}" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
                         {{ $supportEmail }}
                     </a>. Your email will automatically create a support ticket, and our AI or support team will respond as soon as possible.
                 </p>

@@ -50,7 +50,7 @@ class TicketEmailService
         }
 
         // Handle test recipient override for dummy example domain redirection in local development
-        $testEmail = env('TEST_RECIPIENT_EMAIL');
+        $testEmail = config('services.test_recipient_email');
         if (app()->isLocal() && !app()->runningInConsole() && !empty($testEmail)) {
             if (preg_match('/@example\.(com|org|net)$/i', $recipientEmail)) {
                 Log::info('Redirecting dummy example domain email to test recipient email', [

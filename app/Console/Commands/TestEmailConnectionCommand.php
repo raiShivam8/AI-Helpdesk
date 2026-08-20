@@ -20,7 +20,7 @@ class TestEmailConnectionCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Test IMAP and SMTP configuration and network connectivity for Railway/Production';
+    protected $description = 'Test IMAP and SMTP configuration and network connectivity for Render/Production';
 
     /**
      * Execute the console command.
@@ -59,9 +59,9 @@ class TestEmailConnectionCommand extends Command
             } catch (\Throwable $e) {
                 $this->error(" ✖ IMAP FAIL: " . $e->getMessage());
                 $this->warn("   Troubleshooting:");
-                $this->warn("   1. Verify your Gmail App Password (16 characters, 2-Step Verification enabled, no spaces).");
-                $this->warn("   2. Ensure IMAP access is enabled in Gmail Settings > Forwarding and POP/IMAP.");
-                $this->warn("   3. Check Railway Environment Variables: IMAP_HOST=imap.gmail.com, IMAP_PORT=993, IMAP_ENCRYPTION=ssl");
+                $this->warn("   1. Verify your credentials (App Password if using Gmail, 2-Step Verification enabled).");
+                $this->warn("   2. Ensure IMAP access is enabled in your email provider settings.");
+                $this->warn("   3. Check Environment Variables: IMAP_HOST=imap.gmail.com, IMAP_PORT=993, IMAP_ENCRYPTION=ssl");
                 $hasError = true;
             }
         }

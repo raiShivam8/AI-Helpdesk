@@ -1,10 +1,10 @@
 @props([
-    'email' => config('mail.support_email', env('SUPPORT_EMAIL', 'raishivamrai837@gmail.com')),
+    'email' => config('mail.support_email', 'raishivamrai837@gmail.com'),
     'variant' => 'card', // 'card', 'compact', or 'banner'
 ])
 
 @php
-    $supportEmail = $email ?: env('SUPPORT_EMAIL', 'raishivamrai837@gmail.com');
+    $supportEmail = $email ?: config('mail.support_email', 'raishivamrai837@gmail.com');
 @endphp
 
 @if ($variant === 'compact')

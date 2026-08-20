@@ -20,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Enforce relative asset URL paths so Vite CSS/JS assets always load on any domain or proxy
-        config(['app.asset_url' => env('ASSET_URL', '/')]);
+        config(['app.asset_url' => config('app.asset_url', '/')]);
 
         if ($this->app->environment('production') || str_starts_with((string) config('app.url'), 'https://') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');

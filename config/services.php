@@ -36,6 +36,8 @@ return [
     ],
 
 
+    'test_recipient_email' => env('TEST_RECIPIENT_EMAIL'),
+
     'gemini' => [
         'key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-flash-latest'),

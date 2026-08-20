@@ -117,6 +117,7 @@ WORKDIR /var/www/html
 
 # Copy Laravel project
 COPY . .
+RUN cp .env.example .env || touch .env
 
 
 # Copy built frontend
@@ -143,10 +144,9 @@ RUN chown -R www-data:www-data /var/www/html \
 
 
 
-# Railway port
-EXPOSE 80
+# Render & Default Web Ports
+EXPOSE 10000
 EXPOSE 8080
-
-
+EXPOSE 80
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

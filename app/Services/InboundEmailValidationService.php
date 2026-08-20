@@ -29,9 +29,7 @@ class InboundEmailValidationService
         // 2. Ignore ONLY emails sent from support email itself (self-sent)
         $supportEmails = array_filter(array_map(fn($e) => strtolower(trim((string) $e)), [
             config('imap.accounts.default.username'),
-            env('IMAP_USERNAME'),
             config('mail.support_email'),
-            env('SUPPORT_EMAIL'),
             'srai80147@gmail.com',
         ]));
 

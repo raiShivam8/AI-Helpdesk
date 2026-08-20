@@ -205,7 +205,7 @@
             </div>
 
             {{-- ── AI Summary Card ── --}}
-            <div x-show="summary || isSummarizing || summaryError" x-cloak class="card p-5 border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-r from-indigo-50/30 dark:from-indigo-900/20 to-purple-50/30 dark:to-purple-900/20 shadow-sm animate-in space-y-4">
+            <div x-show="summary || isSummarizing || summaryError" x-cloak class="card p-5 border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-r from-indigo-50/30 dark:from-indigo-900/20 to-purple-50/30 dark:to-purple-900/20 shadow-sm space-y-4">
                 <div class="flex items-center justify-between border-b border-indigo-100 dark:border-indigo-900/50 pb-3">
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 text-indigo-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -227,7 +227,7 @@
                 </div>
 
                 {{-- Error Banner --}}
-                <div x-show="summaryError" class="p-3 bg-red-50 border border-red-200 text-xs text-red-800 rounded-lg flex items-center justify-between animate-in">
+                <div x-show="summaryError" class="p-3 bg-red-50 border border-red-200 text-xs text-red-800 rounded-lg flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -238,7 +238,7 @@
                 </div>
 
                 {{-- Summary Sections --}}
-                <div x-show="summary && !isSummarizing" class="space-y-4 text-sm text-slate-800 dark:text-slate-200 animate-in">
+                <div x-show="summary && !isSummarizing" class="space-y-4 text-sm text-slate-800 dark:text-slate-200">
                     {{-- Summary Paragraph --}}
                     <div class="bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 rounded-xl p-4 shadow-sm">
                         <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Concise Summary</p>
@@ -412,7 +412,7 @@
 
                     {{-- System Transfer Event Banner --}}
                     @if($reply->sender_type === \App\Enums\SenderType::System)
-                        <div class="my-3 flex items-center justify-center w-full animate-in">
+                        <div class="my-3 flex items-center justify-center w-full">
                             <div class="w-full max-w-xl p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 shadow-2xs flex items-start gap-3">
                                 <div class="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -436,7 +436,7 @@
 
                     {{-- Agent reply --}}
                     @elseif($reply->sender_type === \App\Enums\SenderType::Agent)
-                    <div class="flex flex-col items-start animate-in">
+                    <div class="flex flex-col items-start">
                         {{-- Agent / AI label row --}}
                         <div class="flex items-center gap-2 mb-1.5 ml-1">
                             <div class="avatar avatar-sm bg-indigo-100 text-indigo-700 font-semibold shrink-0">
@@ -506,7 +506,7 @@
                          ║  CUSTOMER reply — right-aligned    ║
                          ╚════════════════════════════════════╝ --}}
                     @else
-                    <div class="flex flex-col items-end animate-in">
+                    <div class="flex flex-col items-end">
                         {{-- Customer label row --}}
                         <div class="flex items-center gap-2 mb-1.5 mr-1">
                             <time
@@ -696,7 +696,7 @@
                     @csrf
 
                     {{-- Error banner for API failure --}}
-                    <div x-show="polishError" x-cloak class="mb-4 p-3.5 bg-red-50 border border-red-200 text-xs text-red-800 rounded-xl flex items-center justify-between shadow-sm animate-in">
+                    <div x-show="polishError" x-cloak class="mb-4 p-3.5 bg-red-50 border border-red-200 text-xs text-red-800 rounded-xl flex items-center justify-between shadow-sm">
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -962,7 +962,7 @@
                         </div>
 
                         {{-- Transfer Reason Box (Shows when reassigning) --}}
-                        <div x-show="showReason" x-cloak class="space-y-2 animate-in pt-1">
+                        <div x-show="showReason" x-cloak class="space-y-2 pt-1">
                             <label for="transfer_reason" class="block text-xs font-semibold text-slate-600 dark:text-slate-400">
                                 Transfer Reason <span class="text-amber-500 font-normal">(Why are you transferring this ticket?)</span>
                             </label>
@@ -1125,7 +1125,7 @@
     {{-- ══════════════════════════════════════════════
          IMAGE LIGHTBOX MODAL (Full screen preview)
     ══════════════════════════════════════════════ --}}
-    <div x-show="selectedImageModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in" @keydown.escape.window="selectedImageModal = null">
+    <div x-show="selectedImageModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4" @keydown.escape.window="selectedImageModal = null">
         <div class="relative max-w-4xl w-full bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800" @click.away="selectedImageModal = null">
             <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Image & Screenshot Preview</span>

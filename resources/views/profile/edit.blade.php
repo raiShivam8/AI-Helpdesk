@@ -1,28 +1,32 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Profile') }}
-        </h2>
+        <div class="flex items-center justify-between w-full min-w-0">
+            <div class="min-w-0">
+                <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">Profile Settings</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate hidden sm:block">Manage your account credentials, password, and security</p>
+            </div>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-profile-information-form')
-                </div>
+    <div class="space-y-6 max-w-4xl">
+        {{-- Profile Info Card --}}
+        <div class="card p-6 sm:p-8">
+            <div class="max-w-xl">
+                @include('profile.partials.update-profile-information-form')
             </div>
+        </div>
 
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-password-form')
-                </div>
+        {{-- Password Card --}}
+        <div class="card p-6 sm:p-8">
+            <div class="max-w-xl">
+                @include('profile.partials.update-password-form')
             </div>
+        </div>
 
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.delete-user-form')
-                </div>
+        {{-- Delete Account Card --}}
+        <div class="card p-6 sm:p-8 border-red-200 dark:border-red-900/40">
+            <div class="max-w-xl">
+                @include('profile.partials.delete-user-form')
             </div>
         </div>
     </div>

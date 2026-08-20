@@ -28,8 +28,8 @@
                 }
             }
         @endphp
-        <link rel="stylesheet" href="{{ asset($cssFile) }}">
-        <script type="module" src="{{ asset($jsFile) }}"></script>
+        <link rel="stylesheet" href="{{ $cssFile }}">
+        <script type="module" src="{{ $jsFile }}"></script>
 
         <style>
             *, *::before, *::after { box-sizing: border-box; }

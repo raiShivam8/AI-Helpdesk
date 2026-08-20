@@ -76,10 +76,10 @@ class DashboardController extends Controller
         $endDateStr   = now()->format('Y-m-d');
 
         $rawCounts = (clone $baseQuery)
-            ->whereRaw("DATE(created_at) >= ?  AND DATE(created_at) <= ?", [$startDateStr, $endDateStr])
+            ->whereRaw("DATE(created_at) >= ? AND DATE(created_at) <= ?", [$startDateStr, $endDateStr])
             ->selectRaw("DATE(created_at) AS ticket_date, COUNT(*) AS total")
-            ->groupBy('ticket_date')
-            ->orderBy('ticket_date')
+            ->groupBy(DB::raw("DATE(created_at)"))
+            ->orderBy(DB::raw("DATE(created_at)"))
             ->pluck('total', 'ticket_date')
             ->toArray();
 

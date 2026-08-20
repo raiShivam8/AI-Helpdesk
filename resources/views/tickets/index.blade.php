@@ -141,7 +141,7 @@
             <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                 <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">Active filters:</span>
                 @if(!empty($search))
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full ring-1 ring-emerald-200">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-full ring-1 ring-emerald-200 dark:ring-emerald-700/50">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
@@ -149,17 +149,17 @@
                     </span>
                 @endif
                 @if(!empty($status))
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full ring-1 ring-indigo-200">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-semibold rounded-full ring-1 ring-indigo-200 dark:ring-indigo-700/50">
                         Status: {{ ucfirst($status) }}
                     </span>
                 @endif
                 @if(!empty($category))
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 text-violet-700 text-xs font-semibold rounded-full ring-1 ring-violet-200">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-semibold rounded-full ring-1 ring-violet-200 dark:ring-violet-700/50">
                         Category: {{ ucfirst($category) }}
                     </span>
                 @endif
                 @if(!empty($agent))
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-50 text-sky-700 text-xs font-semibold rounded-full ring-1 ring-sky-200">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-50 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-semibold rounded-full ring-1 ring-sky-200 dark:ring-sky-700/50">
                         Agent: {{ $agent === 'unassigned' ? 'Unassigned' : ($agents->firstWhere('id', $agent)?->name ?? $agent) }}
                     </span>
                 @endif
@@ -264,9 +264,9 @@
                                 @if($ticket->category)
                                     @php
                                         $catCls = match($ticket->category) {
-                                            \App\Enums\TicketCategory::TechnicalQuestion => 'bg-violet-50 text-violet-700 ring-violet-200',
-                                            \App\Enums\TicketCategory::RefundRequest     => 'bg-rose-50 text-rose-700 ring-rose-200',
-                                            default => 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+                                            \App\Enums\TicketCategory::TechnicalQuestion => 'bg-violet-50 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 ring-violet-200 dark:ring-violet-700/50',
+                                            \App\Enums\TicketCategory::RefundRequest     => 'bg-rose-50 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 ring-rose-200 dark:ring-rose-700/50',
+                                            default => 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-indigo-200 dark:ring-indigo-700/50',
                                         };
                                     @endphp
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 {{ $catCls }}">

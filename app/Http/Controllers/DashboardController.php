@@ -82,29 +82,17 @@ class DashboardController extends Controller
         }
 
         // ── Chart data: tickets created per day for last 14 days ──────────────
-        $startDateStr = now()->subDays(13)->format('Y-m-d');
-        $endDateStr   = now()->format('Y-m-d');
-
+        $startDate = now()->subDays(13)->startOfDay();
         $rawCounts = [];
         try {
-            $driverName = DB::connection()->getDriverName();
-            if ($driverName === 'pgsql') {
-                $rawCounts = (clone $baseQuery)
-                    ->whereRaw("created_at >= ? AND created_at <= ?", [$startDateStr . ' 00:00:00', $endDateStr . ' 23:59:59'])
-                    ->selectRaw("TO_CHAR(created_at, 'YYYY-MM-DD') AS ticket_date, COUNT(*) AS total")
-                    ->groupBy(DB::raw("TO_CHAR(created_at, 'YYYY-MM-DD')"))
-                    ->orderBy(DB::raw("TO_CHAR(created_at, 'YYYY-MM-DD')"))
-                    ->pluck('total', 'ticket_date')
-                    ->toArray();
-            } else {
-                $rawCounts = (clone $baseQuery)
-                    ->whereRaw("DATE(created_at) >= ? AND DATE(created_at) <= ?", [$startDateStr, $endDateStr])
-                    ->selectRaw("DATE(created_at) AS ticket_date, COUNT(*) AS total")
-                    ->groupBy(DB::raw("DATE(created_at)"))
-                    ->orderBy(DB::raw("DATE(created_at)"))
-                    ->pluck('total', 'ticket_date')
-                    ->toArray();
-            }
+            $rawCounts = (clone $baseQuery)
+                ->where('created_at', '>=', $startDate)
+                ->pluck('created_at')
+                ->groupBy(function ($dt) {
+                    return $dt ? \Carbon\Carbon::parse($dt)->format('Y-m-d') : null;
+                })
+                ->map(fn($group) => count($group))
+                ->toArray();
         } catch (\Throwable $e) {
             report($e);
             $rawCounts = [];
@@ -114,18 +102,23 @@ class DashboardController extends Controller
         $chartData   = [];
 
         for ($i = 13; $i >= 0; $i--) {
-            $date          = now()->subDays($i)->format('Y-m-d');
+            $dateKey       = now()->subDays($i)->format('Y-m-d');
             $chartLabels[] = now()->subDays($i)->format('M j');
-            $chartData[]   = (int) ($rawCounts[$date] ?? 0);
+            $chartData[]   = (int) ($rawCounts[$dateKey] ?? 0);
         }
 
         // ── Category & Status Breakdown ──────────────────────────────────────
         $rawCategoryCounts = [];
         try {
             $rawCategoryCounts = (clone $baseQuery)
-                ->select('category', DB::raw('COUNT(*) AS total'))
-                ->groupBy('category')
-                ->pluck('total', 'category')
+                ->pluck('category')
+                ->groupBy(function ($cat) {
+                    if (is_object($cat)) {
+                        return $cat->value ?? (method_exists($cat, 'label') ? $cat->label() : (string)$cat);
+                    }
+                    return (string) ($cat ?? 'Uncategorized');
+                })
+                ->map(fn($group) => count($group))
                 ->toArray();
         } catch (\Throwable $e) {
             report($e);
@@ -168,9 +161,14 @@ class DashboardController extends Controller
         $rawStatusCounts = [];
         try {
             $rawStatusCounts = (clone $baseQuery)
-                ->select('status', DB::raw('COUNT(*) AS total'))
-                ->groupBy('status')
-                ->pluck('total', 'status')
+                ->pluck('status')
+                ->groupBy(function ($st) {
+                    if (is_object($st)) {
+                        return $st->value ?? 'open';
+                    }
+                    return (string) ($st ?? 'open');
+                })
+                ->map(fn($group) => count($group))
                 ->toArray();
         } catch (\Throwable $e) {
             report($e);

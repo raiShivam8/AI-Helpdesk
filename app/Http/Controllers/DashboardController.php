@@ -15,6 +15,14 @@ class DashboardController extends Controller
      */
     public function index(\Illuminate\Http\Request $request): View
     {
+        if (Ticket::count() === 0) {
+            try {
+                (new \Database\Seeders\ProductionSyncSeeder())->run();
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         $selectedAgentId = $request->query('agent_id');
         $agents = User::whereIn('role', [\App\Enums\Role::Agent, \App\Enums\Role::Admin])->orderBy('name')->get();
         $selectedAgent = $selectedAgentId ? User::find($selectedAgentId) : null;

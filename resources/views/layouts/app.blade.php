@@ -482,7 +482,15 @@
 
                 {{-- Page Content --}}
                 <main class="flex-1 p-4 sm:p-6 lg:p-8">
-                    {{ $slot }}
+                    @php
+                        try {
+                            $renderedSlot = (string) ($slot ?? '');
+                        } catch (\Throwable $e) {
+                            report($e);
+                            $renderedSlot = '<div class="p-6 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-2xl shadow-sm"><h3 class="font-bold text-sm mb-1">Rendering Exception</h3><p class="text-xs">' . e($e->getMessage()) . '</p></div>';
+                        }
+                    @endphp
+                    {!! $renderedSlot !!}
                 </main>
 
             </div>

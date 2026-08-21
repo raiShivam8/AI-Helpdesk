@@ -39,7 +39,9 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return $this->role === Role::Admin;
+        if ($this->role === Role::Admin) return true;
+        $val = is_object($this->role) ? ($this->role->value ?? '') : (string) ($this->role ?? '');
+        return strtolower($val) === 'admin';
     }
 
     /**
@@ -47,7 +49,9 @@ class User extends Authenticatable
      */
     public function isAgent(): bool
     {
-        return $this->role === Role::Agent;
+        if ($this->role === Role::Agent) return true;
+        $val = is_object($this->role) ? ($this->role->value ?? '') : (string) ($this->role ?? '');
+        return strtolower($val) === 'agent';
     }
 
     public function appNotifications(): \Illuminate\Database\Eloquent\Relations\HasMany
@@ -60,7 +64,9 @@ class User extends Authenticatable
      */
     public function isCustomer(): bool
     {
-        return $this->role === Role::Customer;
+        if ($this->role === Role::Customer) return true;
+        $val = is_object($this->role) ? ($this->role->value ?? '') : (string) ($this->role ?? '');
+        return strtolower($val) === 'customer';
     }
 
     /**

@@ -603,9 +603,9 @@
                     <div class="avatar avatar-md gradient-brand text-white font-semibold shrink-0">
                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                     </div>
-                    <div>
-                        <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ auth()->user()->name }}</p>
-                        <div class="flex items-center gap-1.5 mt-0.5">
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold text-slate-900 dark:text-white truncate">{{ auth()->user()->name }}</p>
+                        <div class="flex flex-wrap items-center gap-1.5 mt-0.5">
                             <p class="text-xs text-slate-500 dark:text-slate-400">Replying as</p>
                             @if(auth()->user()->isAdmin())
                                 <span class="badge badge-admin">Admin</span>
@@ -779,15 +779,15 @@
                         </p>
                     </div>
 
-                    <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700">
-                        <p class="text-xs text-slate-400 flex items-center gap-1">
+                    <div class="flex flex-col gap-3 pt-3 border-t border-slate-100 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-xs text-slate-400 flex items-center gap-1 shrink-0">
                             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             Stored as <strong class="font-semibold text-indigo-600">{{ \App\Enums\SenderType::Agent->label() }}</strong> reply.
                         </p>
 
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             {{-- Single Unified Attachment Button (File & Image) --}}
                             <button
                                 type="button"
@@ -804,7 +804,7 @@
                             {{-- Polish Reply Button --}}
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1.5 px-4.5 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-800 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-800 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
                                 :disabled="body.trim().length === 0 || isPolishing"
                                 @click="polish()"
                             >

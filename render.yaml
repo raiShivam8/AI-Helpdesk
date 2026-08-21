@@ -45,9 +45,13 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: SUPPORT_EMAIL
-        sync: false
+        value: "srai80147@gmail.com"
       - key: SUPPORT_NAME
         value: "AI Helpdesk"
+      - key: ADMIN_EMAIL
+        value: "admin@gmail.com"
+      - key: ADMIN_PASSWORD
+        value: "password123"
       - key: MAIL_MAILER
         value: smtp
       - key: MAIL_HOST

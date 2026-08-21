@@ -65,9 +65,10 @@ echo "📦 Running database migrations and seeders..."
 php artisan migrate --force
 php artisan db:seed --force || true
 
-echo "🔒 Setting permissions for www-data..."
-chown -R www-data:www-data /var/www/html
-chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
+echo "🔒 Setting permissions for www-data and Nginx temp dirs..."
+mkdir -p /var/lib/nginx/tmp /var/log/nginx /var/tmp/nginx /tmp
+chown -R www-data:www-data /var/www/html /var/lib/nginx /var/log/nginx /var/tmp/nginx /tmp || true
+chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/lib/nginx /var/log/nginx /var/tmp/nginx /tmp || true
 
 if [ -f "/etc/nginx/nginx.conf" ]; then
     sed -i 's/user  nginx;/user www-data;/g' /etc/nginx/nginx.conf || true

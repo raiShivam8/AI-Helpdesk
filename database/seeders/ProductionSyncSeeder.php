@@ -12,10 +12,22 @@ class ProductionSyncSeeder extends Seeder
     {
         Schema::disableForeignKeyConstraints();
 
-        DB::table('app_notifications')->truncate();
-        DB::table('ticket_replies')->truncate();
-        DB::table('tickets')->truncate();
-        DB::table('users')->truncate();
+        $driver = DB::connection()->getDriverName();
+        if ($driver === 'pgsql') {
+            try {
+                DB::statement('TRUNCATE TABLE app_notifications, ticket_replies, tickets, users RESTART IDENTITY CASCADE;');
+            } catch (\Throwable $e) {
+                DB::table('app_notifications')->truncate();
+                DB::table('ticket_replies')->truncate();
+                DB::table('tickets')->truncate();
+                DB::table('users')->truncate();
+            }
+        } else {
+            DB::table('app_notifications')->truncate();
+            DB::table('ticket_replies')->truncate();
+            DB::table('tickets')->truncate();
+            DB::table('users')->truncate();
+        }
 
         $users = array (
   0 => 
@@ -2050,6 +2062,15 @@ I am facing an issue regarding: General issue with account login (#134). Please 
 
         foreach ($notifications as $notif) {
             DB::table('app_notifications')->insert($notif);
+        }
+
+        if ($driver === 'pgsql') {
+            foreach (['users', 'tickets', 'ticket_replies', 'app_notifications'] as $table) {
+                try {
+                    $maxId = DB::table($table)->max('id') ?? 1;
+                    DB::statement("SELECT setval('{$table}_id_seq', {$maxId}, true);");
+                } catch (\Throwable $e) {}
+            }
         }
 
         Schema::enableForeignKeyConstraints();

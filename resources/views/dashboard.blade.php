@@ -200,7 +200,7 @@
             <div>
                 <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Recent Support Tickets</h2>
                 <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                    {{ $tickets->total() }} total tickets — showing {{ $tickets->firstItem() }}–{{ $tickets->lastItem() }}
+                    {{ $tickets->total() }} total tickets — showing {{ $tickets->firstItem() ?? 0 }}–{{ $tickets->lastItem() ?? 0 }}
                 </p>
             </div>
             <a href="{{ route('tickets.index') }}" class="text-xs font-semibold text-indigo-500 hover:text-indigo-400 flex items-center gap-1 transition-colors shrink-0">

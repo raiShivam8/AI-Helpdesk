@@ -59,8 +59,9 @@ php artisan config:cache || true
 php artisan route:cache || true
 php artisan view:clear || true
 
-echo "📦 Running database migrations..."
+echo "📦 Running database migrations and seeders..."
 php artisan migrate --force
+php artisan db:seed --force || true
 
 echo "🔒 Setting permissions for www-data..."
 chown -R www-data:www-data /var/www/html

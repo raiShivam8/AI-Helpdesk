@@ -11,6 +11,15 @@ Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'ind
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+Route::get('/seed-database', function () {
+    try {
+        (new \Database\Seeders\ProductionSyncSeeder())->run();
+        return response()->json(['success' => true, 'message' => 'Database successfully seeded with 12 tickets and admin credentials!']);
+    } catch (\Throwable $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

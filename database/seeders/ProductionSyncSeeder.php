@@ -2045,19 +2045,25 @@ I am facing an issue regarding: General issue with account login (#134). Please 
         $notifications = array (
 );
 
+        $userColumns = Schema::getColumnListing('users');
         foreach ($users as $user) {
-            DB::table('users')->insert($user);
+            $cleanUser = array_intersect_key($user, array_flip($userColumns));
+            DB::table('users')->insert($cleanUser);
         }
 
+        $ticketColumns = Schema::getColumnListing('tickets');
         foreach ($tickets as $ticket) {
             if (!empty($ticket['ai_resolved_at']) && empty($ticket['assigned_agent_id'])) {
                 $ticket['assigned_agent_id'] = 3;
             }
-            DB::table('tickets')->insert($ticket);
+            $cleanTicket = array_intersect_key($ticket, array_flip($ticketColumns));
+            DB::table('tickets')->insert($cleanTicket);
         }
 
+        $replyColumns = Schema::getColumnListing('ticket_replies');
         foreach ($replies as $reply) {
-            DB::table('ticket_replies')->insert($reply);
+            $cleanReply = array_intersect_key($reply, array_flip($replyColumns));
+            DB::table('ticket_replies')->insert($cleanReply);
         }
 
         foreach ($notifications as $notif) {

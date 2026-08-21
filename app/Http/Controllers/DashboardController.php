@@ -90,7 +90,7 @@ class DashboardController extends Controller
             $driverName = DB::connection()->getDriverName();
             if ($driverName === 'pgsql') {
                 $rawCounts = (clone $baseQuery)
-                    ->whereRaw("created_at::date >= ? AND created_at::date <= ?", [$startDateStr, $endDateStr])
+                    ->whereRaw("created_at >= ? AND created_at <= ?", [$startDateStr . ' 00:00:00', $endDateStr . ' 23:59:59'])
                     ->selectRaw("TO_CHAR(created_at, 'YYYY-MM-DD') AS ticket_date, COUNT(*) AS total")
                     ->groupBy(DB::raw("TO_CHAR(created_at, 'YYYY-MM-DD')"))
                     ->orderBy(DB::raw("TO_CHAR(created_at, 'YYYY-MM-DD')"))

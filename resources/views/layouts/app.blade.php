@@ -13,6 +13,9 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+        <!-- Chart.js CDN for Dashboard Charts -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
         <!-- ⚡ Dark mode: apply class BEFORE paint to prevent flash -->
         <script>
             (function () {

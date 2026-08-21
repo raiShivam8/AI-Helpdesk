@@ -38,19 +38,32 @@ class DashboardController extends Controller
         }
 
         // ── Core metrics ──────────────────────────────────────────────────────
+        $totalTickets = 0;
+        $openTickets = 0;
+        $aiResolvedCount = 0;
+        $resolvedTickets = collect([]);
 
-        $totalTickets = (clone $baseQuery)->count();
-        $openTickets  = (clone $baseQuery)->where('status', TicketStatus::Open)->count();
+        try {
+            $totalTickets = (clone $baseQuery)->count();
+            $openTickets  = (clone $baseQuery)->where(function($q) {
+                $q->where('status', TicketStatus::Open)
+                  ->orWhere('status', 'open')
+                  ->orWhere('status', 'Open');
+            })->count();
 
-        $aiResolvedCount   = (clone $baseQuery)->whereNotNull('ai_resolved_at')->count();
+            $aiResolvedCount = (clone $baseQuery)->whereNotNull('ai_resolved_at')->count();
+
+            $resolvedTickets = (clone $baseQuery)->where(function ($q) {
+                $q->whereNotNull('resolved_at')
+                  ->orWhereNotNull('ai_resolved_at')
+                  ->orWhereIn('status', [TicketStatus::Resolved, TicketStatus::Closed, 'resolved', 'closed', 'Resolved', 'Closed']);
+            })->get();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         $aiResolvedTickets = (string) $aiResolvedCount;
         $aiResolutionPct   = $totalTickets > 0 ? round(($aiResolvedCount / $totalTickets) * 100, 1) . '%' : '0%';
-
-        $resolvedTickets = (clone $baseQuery)->where(function ($q) {
-            $q->whereNotNull('resolved_at')
-              ->orWhereNotNull('ai_resolved_at')
-              ->orWhereIn('status', [TicketStatus::Resolved, TicketStatus::Closed]);
-        })->get();
 
         if ($resolvedTickets->count() > 0) {
             $totalSeconds = $resolvedTickets->sum(function ($t) {

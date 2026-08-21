@@ -34,6 +34,54 @@ class Ticket extends Model
     }
 
     /**
+     * Safe accessor for category attribute.
+     */
+    protected function category(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: function ($value) {
+                if (empty($value)) return null;
+                if ($value instanceof TicketCategory) return $value;
+                $clean = strtolower(trim((string) $value));
+                $cleanNoUnderscore = str_replace(['_', '-'], ' ', $clean);
+                return TicketCategory::tryFrom($clean) 
+                    ?? TicketCategory::tryFrom($cleanNoUnderscore)
+                    ?? null;
+            }
+        );
+    }
+
+    /**
+     * Safe accessor for status attribute.
+     */
+    protected function status(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: function ($value) {
+                if (empty($value)) return TicketStatus::Open;
+                if ($value instanceof TicketStatus) return $value;
+                $clean = strtolower(trim((string) $value));
+                return TicketStatus::tryFrom($clean) ?? TicketStatus::Open;
+            }
+        );
+    }
+
+    /**
+     * Safe accessor for priority attribute.
+     */
+    protected function priority(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: function ($value) {
+                if (empty($value)) return TicketPriority::Medium;
+                if ($value instanceof TicketPriority) return $value;
+                $clean = strtolower(trim((string) $value));
+                return TicketPriority::tryFrom($clean) ?? TicketPriority::Medium;
+            }
+        );
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -41,9 +89,6 @@ class Ticket extends Model
     protected function casts(): array
     {
         return [
-            'status'         => TicketStatus::class,
-            'category'       => TicketCategory::class,
-            'priority'       => TicketPriority::class,
             'classified_at'  => 'datetime',
             'ai_resolved_at' => 'datetime',
             'resolved_at'    => 'datetime',

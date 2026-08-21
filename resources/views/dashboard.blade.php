@@ -271,7 +271,7 @@
                             <td class="py-3 px-4 whitespace-nowrap hidden md:table-cell">
                                 @if($ticket->category)
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-700/50">
-                                        {{ $ticket->category->value }}
+                                        {{ is_object($ticket->category) ? ($ticket->category->value ?? $ticket->category->label()) : $ticket->category }}
                                     </span>
                                 @else
                                     <span class="text-slate-400 dark:text-slate-600 text-xs italic">—</span>
@@ -280,7 +280,8 @@
 
                             <td class="py-3 px-4 text-center whitespace-nowrap">
                                 @php
-                                    $statusCls = match($ticket->status->value) {
+                                    $rawStatusStr = is_object($ticket->status) ? ($ticket->status->value ?? 'open') : (string) ($ticket->status ?? 'open');
+                                    $statusCls = match(strtolower($rawStatusStr)) {
                                         'open'       => 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-200 dark:ring-indigo-700/50',
                                         'closed'     => 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 ring-1 ring-slate-200 dark:ring-slate-600',
                                         'new'        => 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 ring-1 ring-blue-200 dark:ring-blue-700/50',
@@ -289,7 +290,7 @@
                                         default      => 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
                                     };
                                 @endphp
-                                <span class="badge {{ $statusCls }} text-[11px]">{{ ucfirst($ticket->status->value) }}</span>
+                                <span class="badge {{ $statusCls }} text-[11px]">{{ ucfirst($rawStatusStr) }}</span>
                             </td>
 
                             <td class="py-3 px-4 whitespace-nowrap text-xs text-slate-600 dark:text-slate-400 hidden lg:table-cell">

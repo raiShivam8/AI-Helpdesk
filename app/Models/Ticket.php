@@ -21,7 +21,7 @@ class Ticket extends Model
      */
     public function assignedAgent(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_agent_id');
+        return $this->belongsTo(User::class, 'assigned_agent_id')->withTrashed();
     }
 
     /**

@@ -13,8 +13,8 @@ class SyncEmailsController extends Controller
      */
     public function __invoke(Request $request, ImapService $imapService): \Illuminate\Http\JsonResponse|RedirectResponse
     {
-        @set_time_limit(180);
-        @ini_set('max_execution_time', '180');
+        @set_time_limit(15);
+        @ini_set('max_execution_time', '15');
 
         try {
             $includeSeen = filter_var($request->input('all'), FILTER_VALIDATE_BOOLEAN);
@@ -45,8 +45,8 @@ class SyncEmailsController extends Controller
                 return response()->json([
                     'success' => false,
                     'count'   => 0,
-                    'error'   => $e->getMessage(),
-                ], 500);
+                    'message' => 'IMAP email sync currently unavailable: ' . $e->getMessage(),
+                ], 200);
             }
             return redirect()->back()->with('error', 'Failed to sync IMAP emails: ' . $e->getMessage());
         }

@@ -687,17 +687,24 @@
                 });
             }
 
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js library is not available. Dashboard stats cards and tables remain fully functional.');
+                return;
+            }
+
             // Initial render
-            buildLineChart();
-            buildPieChart();
+            try { buildLineChart(); } catch (e) { console.error('Line chart render error:', e); }
+            try { buildPieChart(); } catch (e) { console.error('Pie chart render error:', e); }
 
             // Tab buttons
-            if (btnCat)  btnCat.addEventListener('click',  () => { pieMode = 'category'; buildPieChart(); });
-            if (btnStat) btnStat.addEventListener('click', () => { pieMode = 'status';   buildPieChart(); });
+            if (btnCat)  btnCat.addEventListener('click',  () => { pieMode = 'category'; try { buildPieChart(); } catch (e) {} });
+            if (btnStat) btnStat.addEventListener('click', () => { pieMode = 'status';   try { buildPieChart(); } catch (e) {} });
 
             // Dark mode observer — rebuild on theme switch
-            new MutationObserver(() => { buildLineChart(); buildPieChart(); })
-                .observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+            new MutationObserver(() => {
+                try { buildLineChart(); } catch (e) {}
+                try { buildPieChart(); } catch (e) {}
+            }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
         });
         </script>
     @endpush

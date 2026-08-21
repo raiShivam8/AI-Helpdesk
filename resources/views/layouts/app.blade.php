@@ -39,8 +39,8 @@
                 }
             }
         @endphp
-        <link rel="stylesheet" href="{{ $cssFile }}">
-        <script type="module" src="{{ $jsFile }}"></script>
+        <link rel="stylesheet" href="{{ asset($cssFile) }}">
+        <script type="module" src="{{ asset($jsFile) }}"></script>
         <style>
             .notif-scrollbar::-webkit-scrollbar {
                 width: 6px;
@@ -149,8 +149,14 @@
               },
               fetchNotifications() {
                   this.loading = true;
-                  fetch('{{ route('notifications.index') }}')
-                      .then(res => res.json())
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 8000);
+                  fetch('{{ route('notifications.index') }}', { signal: controller.signal })
+                      .then(res => {
+                          clearTimeout(timeoutId);
+                          if (!res.ok) throw new Error('Network error');
+                          return res.json();
+                      })
                       .then(data => {
                           const newCount = data.unread_count || 0;
                           if (this.lastUnreadCount > 0 && newCount > this.lastUnreadCount) {
@@ -166,28 +172,37 @@
                           this.unreadCount = newCount;
                           this.loading = false;
                       })
-                      .catch(() => { this.loading = false; });
+                      .catch(err => {
+                          clearTimeout(timeoutId);
+                          this.loading = false;
+                      });
               },
               autoSyncImap() {
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 12000);
                   fetch('{{ route('tickets.sync-emails') }}', {
                       method: 'POST',
                       headers: {
                           'X-CSRF-TOKEN': '{{ csrf_token() }}',
                           'Accept': 'application/json',
                           'X-Requested-With': 'XMLHttpRequest'
-                      }
+                      },
+                      signal: controller.signal
                   })
-                  .then(res => res.json())
+                  .then(res => {
+                      clearTimeout(timeoutId);
+                      if (!res.ok) throw new Error('Sync error');
+                      return res.json();
+                  })
                   .then(data => {
                       if (data.success && data.count > 0) {
                           this.fetchNotifications();
                           this.showToast('📩 New Ticket Received!', `Imported ${data.count} new customer support ticket(s).`, '{{ route('dashboard') }}');
-                          if (window.location.pathname === '/dashboard' || window.location.pathname === '/' || window.location.pathname.includes('/tickets')) {
-                              setTimeout(() => { window.location.reload(); }, 2500);
-                          }
                       }
                   })
-                  .catch(() => {});
+                  .catch(err => {
+                      clearTimeout(timeoutId);
+                  });
               },
               get filteredNotifications() {
                   if (this.tab === 'unread') {
@@ -207,7 +222,7 @@
                   }).then(() => {
                       this.fetchNotifications();
                       if (link) window.location.href = link;
-                  });
+                  }).catch(() => {});
               },
               markAllRead() {
                   fetch('{{ route('notifications.read-all') }}', {
@@ -219,10 +234,10 @@
                       }
                   }).then(() => {
                       this.fetchNotifications();
-                  });
+                  }).catch(() => {});
               }
           }"
-          x-init="fetchNotifications(); autoSyncImap(); setInterval(() => fetchNotifications(), 12000); setInterval(() => autoSyncImap(), 15000);">
+          x-init="fetchNotifications(); setInterval(() => fetchNotifications(), 30000);">
 
         <div class="flex min-h-screen relative overflow-x-hidden overflow-y-auto">
 

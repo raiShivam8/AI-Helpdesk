@@ -69,19 +69,33 @@ class DashboardController extends Controller
         }
 
         // ── Chart data: tickets created per day for last 14 days ──────────────
-        // Use DATE() SQL comparison instead of whereBetween with Carbon objects
-        // (Carbon objects don't compare correctly to ISO-format timestamps in SQLite)
-
         $startDateStr = now()->subDays(13)->format('Y-m-d');
         $endDateStr   = now()->format('Y-m-d');
 
-        $rawCounts = (clone $baseQuery)
-            ->whereRaw("DATE(created_at) >= ? AND DATE(created_at) <= ?", [$startDateStr, $endDateStr])
-            ->selectRaw("DATE(created_at) AS ticket_date, COUNT(*) AS total")
-            ->groupBy(DB::raw("DATE(created_at)"))
-            ->orderBy(DB::raw("DATE(created_at)"))
-            ->pluck('total', 'ticket_date')
-            ->toArray();
+        $rawCounts = [];
+        try {
+            $driverName = DB::connection()->getDriverName();
+            if ($driverName === 'pgsql') {
+                $rawCounts = (clone $baseQuery)
+                    ->whereRaw("created_at::date >= ? AND created_at::date <= ?", [$startDateStr, $endDateStr])
+                    ->selectRaw("TO_CHAR(created_at, 'YYYY-MM-DD') AS ticket_date, COUNT(*) AS total")
+                    ->groupBy(DB::raw("TO_CHAR(created_at, 'YYYY-MM-DD')"))
+                    ->orderBy(DB::raw("TO_CHAR(created_at, 'YYYY-MM-DD')"))
+                    ->pluck('total', 'ticket_date')
+                    ->toArray();
+            } else {
+                $rawCounts = (clone $baseQuery)
+                    ->whereRaw("DATE(created_at) >= ? AND DATE(created_at) <= ?", [$startDateStr, $endDateStr])
+                    ->selectRaw("DATE(created_at) AS ticket_date, COUNT(*) AS total")
+                    ->groupBy(DB::raw("DATE(created_at)"))
+                    ->orderBy(DB::raw("DATE(created_at)"))
+                    ->pluck('total', 'ticket_date')
+                    ->toArray();
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            $rawCounts = [];
+        }
 
         $chartLabels = [];
         $chartData   = [];
@@ -93,11 +107,16 @@ class DashboardController extends Controller
         }
 
         // ── Category & Status Breakdown ──────────────────────────────────────
-        $rawCategoryCounts = (clone $baseQuery)
-            ->select('category', DB::raw('COUNT(*) AS total'))
-            ->groupBy('category')
-            ->pluck('total', 'category')
-            ->toArray();
+        $rawCategoryCounts = [];
+        try {
+            $rawCategoryCounts = (clone $baseQuery)
+                ->select('category', DB::raw('COUNT(*) AS total'))
+                ->groupBy('category')
+                ->pluck('total', 'category')
+                ->toArray();
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         $categoryEnumMap = [];
         foreach (\App\Enums\TicketCategory::cases() as $cat) {
@@ -133,11 +152,16 @@ class DashboardController extends Controller
             $categoryData   = [0, 0, 0, 0];
         }
 
-        $rawStatusCounts = (clone $baseQuery)
-            ->select('status', DB::raw('COUNT(*) AS total'))
-            ->groupBy('status')
-            ->pluck('total', 'status')
-            ->toArray();
+        $rawStatusCounts = [];
+        try {
+            $rawStatusCounts = (clone $baseQuery)
+                ->select('status', DB::raw('COUNT(*) AS total'))
+                ->groupBy('status')
+                ->pluck('total', 'status')
+                ->toArray();
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         $statusLabels = [];
         $statusData   = [];
@@ -160,11 +184,16 @@ class DashboardController extends Controller
 
         // ── Recent Tickets (Paginated 8 per page: Page 1 shows tickets 1 to 8) ──
         // Eager-load 'replies' to avoid N+1 queries from the attachment badge check in blade
-        $tickets = (clone $baseQuery)
-            ->with(['assignedAgent', 'replies'])
-            ->orderBy('id', 'desc')
-            ->paginate(8)
-            ->withQueryString();
+        try {
+            $tickets = (clone $baseQuery)
+                ->with(['assignedAgent', 'replies'])
+                ->orderBy('id', 'desc')
+                ->paginate(8)
+                ->withQueryString();
+        } catch (\Throwable $e) {
+            report($e);
+            $tickets = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 8);
+        }
 
         return view('dashboard', compact(
             'totalTickets',

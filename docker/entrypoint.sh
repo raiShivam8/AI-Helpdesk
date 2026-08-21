@@ -54,10 +54,12 @@ echo "⚡ Caching Laravel config & routes..."
 if [ ! -f "/var/www/html/public/build/manifest.json" ]; then
     echo "⚠️ Warning: public/build/manifest.json is missing! Vite assets might be missing."
 fi
+php artisan config:clear || true
+php artisan route:clear || true
+php artisan view:clear || true
 php artisan package:discover --ansi || true
 php artisan config:cache || true
 php artisan route:cache || true
-php artisan view:clear || true
 
 echo "📦 Running database migrations and seeders..."
 php artisan migrate --force
@@ -65,8 +67,7 @@ php artisan db:seed --force || true
 
 echo "🔒 Setting permissions for www-data..."
 chown -R www-data:www-data /var/www/html
-chmod -R 755 /var/www/html
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
 
 if [ -f "/etc/nginx/nginx.conf" ]; then
     sed -i 's/user  nginx;/user www-data;/g' /etc/nginx/nginx.conf || true

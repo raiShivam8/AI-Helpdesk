@@ -25,7 +25,8 @@ class DashboardController extends Controller
 
         $selectedAgentId = $request->query('agent_id');
         $agents = User::whereIn('role', [\App\Enums\Role::Agent, \App\Enums\Role::Admin])->orderBy('name')->get();
-        $selectedAgent = $selectedAgentId ? User::find($selectedAgentId) : null;
+        $selectedAgent = ($selectedAgentId && $selectedAgentId !== 'unassigned') ? User::find($selectedAgentId) : null;
+
 
         // Base query with agent filter
         $baseQuery = Ticket::query();

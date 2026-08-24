@@ -33,7 +33,10 @@ class TicketController extends Controller
                 'nullable',
                 'string',
                 function ($attribute, $value, $fail) {
-                    if ($value !== '' && $value !== null && $value !== 'unassigned' && !User::where('id', $value)->exists()) {
+                    if ($value === '' || $value === null || $value === 'unassigned') {
+                        return; // valid special values
+                    }
+                    if (!is_numeric($value) || !User::whereIn('role', [Role::Agent, Role::Admin])->where('id', $value)->exists()) {
                         $fail('The selected agent is invalid.');
                     }
                 }
@@ -90,8 +93,8 @@ class TicketController extends Controller
 
         $tickets = $query->orderBy($sort, $direction)->paginate(8)->withQueryString();
 
-        // Get all users who can be assigned (to populate agent filter)
-        $agents = User::orderBy('name')->get();
+        // Get all users who can be assigned (to populate agent filter) — only agents & admins, no customers
+        $agents = User::whereIn('role', [Role::Agent, Role::Admin])->orderBy('name')->get();
 
         return view('tickets.index', compact('tickets', 'sort', 'direction', 'status', 'category', 'agent', 'agents', 'search'));
     }

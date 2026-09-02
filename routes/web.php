@@ -32,6 +32,27 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+
+    Route::get('/debug-gemini', function () {
+        if (!auth()->user()?->isAdmin()) {
+            abort(403);
+        }
+        $rawKey = config('services.gemini.key');
+        $model = config('services.gemini.model');
+        $length = strlen($rawKey ?? '');
+        $preview = $length > 10 ? substr($rawKey, 0, 6) . '...' . substr($rawKey, -4) : ($length > 0 ? 'TOO_SHORT' : 'NOT_SET');
+
+        $response = \Illuminate\Support\Facades\Http::timeout(10)->get("https://generativelanguage.googleapis.com/v1beta/models?key={$rawKey}");
+
+        return response()->json([
+            'key_configured' => !empty($rawKey),
+            'key_length' => $length,
+            'key_preview' => $preview,
+            'model' => $model,
+            'google_http_status' => $response->status(),
+            'google_response' => $response->json('error') ?? 'OK (Google accepted key)',
+        ]);
+    })->name('debug.gemini');
 });
 
 Route::middleware(['auth', 'can:view-users'])->group(function () {

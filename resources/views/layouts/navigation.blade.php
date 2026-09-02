@@ -75,6 +75,17 @@
                 </svg>
                 <span>Users</span>
             </a>
+
+            {{-- AI Settings (admin only) --}}
+            <a href="{{ route('admin.ai-settings.index') }}"
+               class="nav-item {{ request()->routeIs('admin.ai-settings.*') ? 'nav-item-active' : 'nav-item-inactive' }}">
+                <svg class="w-[18px] h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M9.813 15.904L9 21l-1.813-5.096L2.091 14.09 7.187 13.28 9 8.187l1.813 5.096 5.096 1.813-5.096 1.813z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4m-2-2h4" />
+                </svg>
+                <span>AI Settings</span>
+            </a>
         @endif
 
     </nav>

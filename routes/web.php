@@ -37,25 +37,40 @@ Route::middleware('auth')->group(function () {
         if (!auth()->user()?->isAdmin()) {
             abort(403);
         }
-        $rawKey = config('services.gemini.key');
-        $model = config('services.gemini.model');
+        $gemini = app(\App\Services\GeminiService::class);
+        $hasDbKey = !empty(\Illuminate\Support\Facades\Cache::get('system_gemini_api_key'));
+        $rawKey = null;
+        try {
+            $rawKey = $gemini->getApiKey();
+        } catch (\Throwable $e) {}
+
+        $model = $gemini->getModel();
         $length = strlen($rawKey ?? '');
         $preview = $length > 10 ? substr($rawKey, 0, 6) . '...' . substr($rawKey, -4) : ($length > 0 ? 'TOO_SHORT' : 'NOT_SET');
 
-        $response = \Illuminate\Support\Facades\Http::timeout(10)->get("https://generativelanguage.googleapis.com/v1beta/models?key={$rawKey}");
+        $response = null;
+        if (!empty($rawKey)) {
+            $response = \Illuminate\Support\Facades\Http::timeout(10)->get("https://generativelanguage.googleapis.com/v1beta/models?key={$rawKey}");
+        }
 
         return response()->json([
             'key_configured' => !empty($rawKey),
+            'key_source' => $hasDbKey ? 'database_cache' : 'environment',
             'key_length' => $length,
             'key_preview' => $preview,
             'model' => $model,
-            'google_http_status' => $response->status(),
-            'google_response' => $response->json('error') ?? 'OK (Google accepted key)',
+            'google_http_status' => $response?->status() ?? 500,
+            'google_response' => $response?->json('error') ?? ($response?->successful() ? 'OK (Google accepted key)' : 'No key provided'),
+            'admin_settings_url' => route('admin.ai-settings.index'),
         ]);
     })->name('debug.gemini');
 });
 
 Route::middleware(['auth', 'can:view-users'])->group(function () {
+    Route::get('/admin/ai-settings', [\App\Http\Controllers\AiSettingsController::class, 'index'])->name('admin.ai-settings.index');
+    Route::post('/admin/ai-settings', [\App\Http\Controllers\AiSettingsController::class, 'update'])->name('admin.ai-settings.update');
+    Route::post('/admin/ai-settings/test', [\App\Http\Controllers\AiSettingsController::class, 'test'])->name('admin.ai-settings.test');
+
     Route::get('/users', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
     Route::post('/users', [\App\Http\Controllers\UserController::class, 'store'])->name('users.store');
     Route::patch('/users/{user}', [\App\Http\Controllers\UserController::class, 'update'])->name('users.update');

@@ -10,17 +10,71 @@ use RuntimeException;
 class GeminiService
 {
     /**
-     * Get Gemini API key
+     * Get Gemini API key (supports database cache override and ignores placeholders)
      */
-    protected function getApiKey(): string
+    public function getApiKey(): string
     {
-        $key = config('services.gemini.key');
-
-        if (empty($key)) {
-            throw new RuntimeException('Gemini API key is not configured. Please add GEMINI_API_KEY to your .env file.');
+        // 1. Check persistent database cache setting
+        $dbKey = Cache::get('system_gemini_api_key');
+        if (!empty($dbKey) && !in_array(trim($dbKey), ['your_gemini_api_key', 'your_api_key_here'])) {
+            return trim($dbKey);
         }
 
-        return $key;
+        // 2. Check environment config
+        $key = config('services.gemini.key');
+
+        if (empty($key) || in_array(trim($key), ['your_gemini_api_key', 'your_api_key_here'])) {
+            throw new RuntimeException('Gemini API key is not configured. Please add a valid Gemini API key.');
+        }
+
+        return trim($key);
+    }
+
+    /**
+     * Get active Gemini model
+     */
+    public function getModel(): string
+    {
+        $dbModel = Cache::get('system_gemini_model');
+        if (!empty($dbModel)) {
+            return trim($dbModel);
+        }
+
+        return config('services.gemini.model', 'gemini-2.5-flash');
+    }
+
+    /**
+     * Validate key with Google and save persistently
+     */
+    public function validateAndSaveKey(string $key, ?string $model = null): array
+    {
+        $key = trim($key);
+        if (empty($key)) {
+            throw new RuntimeException('API key cannot be empty.');
+        }
+
+        $chosenModel = !empty($model) ? trim($model) : $this->getModel();
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/{$chosenModel}:generateContent?key={$key}";
+        $response = Http::timeout(10)->post($url, [
+            'contents' => [
+                ['parts' => [['text' => 'ping']]]
+            ]
+        ]);
+
+        if (!$response->successful()) {
+            $errorMessage = $response->json('error.message') ?? 'HTTP status ' . $response->status();
+            throw new RuntimeException("Google rejected this key: {$errorMessage}");
+        }
+
+        Cache::forever('system_gemini_api_key', $key);
+        Cache::forever('system_gemini_model', $chosenModel);
+
+        return [
+            'success' => true,
+            'message' => 'API Key successfully verified with Google and saved!',
+            'model' => $chosenModel,
+        ];
     }
 
     /**
@@ -38,7 +92,7 @@ class GeminiService
         $timeout = (int) config('services.gemini.timeout', 30);
         $connectTimeout = (int) config('services.gemini.connect_timeout', 10);
         $proxy = config('services.gemini.proxy');
-        $ipResolve = config('services.gemini.ip_resolve');
+        $ipResolve = config('services.gemini.ip_resolve', 'v4');
 
         $options = [];
         if (!empty($proxy)) {
@@ -47,12 +101,14 @@ class GeminiService
 
         if ($ipResolve === 'v4') {
             $options['curl'] = [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4];
+            $options['force_ip_resolve'] = 'v4';
         } elseif ($ipResolve === 'v6') {
             $options['curl'] = [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6];
+            $options['force_ip_resolve'] = 'v6';
         }
 
         // Primary model and ordered fallback models for high demand / rate limit resilience
-        $primaryModel = config('services.gemini.model', 'gemini-flash-latest');
+        $primaryModel = $this->getModel();
         $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest']));
 
         $payload = array_merge([
@@ -111,6 +167,9 @@ class GeminiService
                 }
 
                 $errorMessage = $response->json('error.message') ?? 'HTTP status code: ' . $response->status();
+                if ($response->status() === 400 && str_contains(strtolower($errorMessage), 'api key')) {
+                    throw new RuntimeException('Gemini API Error: ' . $errorMessage);
+                }
                 Log::warning("Gemini model {$model} returned error status {$response->status()}: {$errorMessage}. Trying fallback model if available...");
                 $lastException = new RuntimeException('Gemini API Error: ' . $errorMessage);
 

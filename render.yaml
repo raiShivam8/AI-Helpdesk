@@ -103,6 +103,8 @@ services:
         value: "https://ai-helpdesk-36ef.onrender.com"
       - key: APP_DEBUG
         value: "false"
+      - key: APP_KEY
+        sync: false
       - key: DB_CONNECTION
         value: pgsql
       - key: DATABASE_URL
@@ -117,6 +119,36 @@ services:
         value: database
       - key: LOG_CHANNEL
         value: stderr
+      - key: SUPPORT_EMAIL
+        value: "srai80147@gmail.com"
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: IMAP_HOST
+        value: imap.gmail.com
+      - key: IMAP_PORT
+        value: "993"
+      - key: IMAP_ENCRYPTION
+        value: ssl
+      - key: IMAP_PROTOCOL
+        value: imap
+      - key: IMAP_USERNAME
+        sync: false
+      - key: IMAP_PASSWORD
+        sync: false
+      - key: IMAP_VALIDATE_CERT
+        value: "true"
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
@@ -136,6 +168,12 @@ services:
         value: "AI Helpdesk"
       - key: APP_ENV
         value: production
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        value: "https://ai-helpdesk-36ef.onrender.com"
+      - key: APP_DEBUG
+        value: "false"
       - key: DB_CONNECTION
         value: pgsql
       - key: DATABASE_URL
@@ -148,16 +186,42 @@ services:
         value: database
       - key: CACHE_STORE
         value: database
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: SUPPORT_EMAIL
+        value: "srai80147@gmail.com"
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
       - key: IMAP_HOST
         value: imap.gmail.com
       - key: IMAP_PORT
         value: "993"
       - key: IMAP_ENCRYPTION
         value: ssl
+      - key: IMAP_PROTOCOL
+        value: imap
       - key: IMAP_USERNAME
         sync: false
       - key: IMAP_PASSWORD
         sync: false
+      - key: IMAP_VALIDATE_CERT
+        value: "true"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
 
 databases:
   # ----------------------------------------------------------------------------

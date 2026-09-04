@@ -60,7 +60,7 @@ class AiSettingsController extends Controller
     {
         $request->validate([
             'gemini_api_key' => ['required', 'string', 'min:10'],
-            'gemini_model' => ['required', 'string', 'in:gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash,gemini-flash-latest'],
+            'gemini_model' => ['required', 'string', 'in:gemini-3.8-flash,gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash,gemini-flash-latest'],
         ]);
 
         try {
@@ -95,7 +95,7 @@ class AiSettingsController extends Controller
     public function test(Request $request): JsonResponse
     {
         $key = trim($request->input('key', ''));
-        $model = trim($request->input('model', 'gemini-2.5-flash'));
+        $model = trim($request->input('model', 'gemini-3.8-flash'));
 
         if (empty($key)) {
             return response()->json([

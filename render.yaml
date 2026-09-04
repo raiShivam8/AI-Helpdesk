@@ -83,7 +83,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.8-flash
 
   # ----------------------------------------------------------------------------
   # 2. Background Worker Service (Laravel Queue Worker)
@@ -152,7 +152,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.8-flash
 
   # ----------------------------------------------------------------------------
   # 3. Cron Job (IMAP Customer Email Polling every 1 minute)
@@ -221,7 +221,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
-        value: gemini-2.5-flash
+        value: gemini-3.8-flash
 
 databases:
   # ----------------------------------------------------------------------------

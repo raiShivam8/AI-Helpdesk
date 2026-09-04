@@ -47,7 +47,7 @@ class GeminiService
 
         $model = config('services.gemini.model');
         if (empty($model)) {
-            $model = getenv('GEMINI_MODEL') ?: (getenv('GOOGLE_MODEL') ?: 'gemini-2.5-flash');
+            $model = getenv('GEMINI_MODEL') ?: (getenv('GOOGLE_MODEL') ?: 'gemini-3.8-flash');
         }
 
         return trim($model);
@@ -119,7 +119,7 @@ class GeminiService
 
         // Primary model and ordered fallback models for high demand / rate limit resilience
         $primaryModel = $this->getModel();
-        $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest']));
+        $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest']));
 
         $payload = array_merge([
             'contents' => [

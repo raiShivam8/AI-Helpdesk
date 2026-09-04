@@ -39,8 +39,8 @@ return [
     'test_recipient_email' => env('TEST_RECIPIENT_EMAIL'),
 
     'gemini' => [
-        'key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'key' => env('GEMINI_API_KEY', env('GOOGLE_API_KEY', env('GEMINI_KEY'))),
+        'model' => env('GEMINI_MODEL', env('GOOGLE_MODEL', 'gemini-2.5-flash')),
         'timeout' => env('GEMINI_TIMEOUT', 30),
         'connect_timeout' => env('GEMINI_CONNECT_TIMEOUT', 10),
         'proxy' => env('GEMINI_PROXY'),

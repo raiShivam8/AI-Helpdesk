@@ -14,6 +14,8 @@ class SentryScrubber
     {
         $sensitiveKeys = [
             'GEMINI_API_KEY',
+            'GOOGLE_API_KEY',
+            'GEMINI_KEY',
             'MAIL_PASSWORD',
             'IMAP_PASSWORD',
             'DB_PASSWORD',

@@ -14,25 +14,37 @@ class GeminiService
      */
     public function getApiKey(): string
     {
-        // 1. Check persistent database cache setting
+        // 1. Check environment variables / Laravel config first
+        $envCandidates = [
+            config('services.gemini.key'),
+            getenv('GEMINI_API_KEY'),
+            getenv('GOOGLE_API_KEY'),
+            getenv('GEMINI_KEY'),
+            $_ENV['GEMINI_API_KEY'] ?? null,
+            $_ENV['GOOGLE_API_KEY'] ?? null,
+            $_SERVER['GEMINI_API_KEY'] ?? null,
+            $_SERVER['GOOGLE_API_KEY'] ?? null,
+        ];
+
+        foreach ($envCandidates as $candidate) {
+            if (!empty($candidate)) {
+                $cleaned = trim((string)$candidate, " \t\n\r\0\x0B\"'");
+                if (!empty($cleaned) && !in_array($cleaned, ['your_gemini_api_key', 'your_api_key_here', 'PLACEHOLDER', 'null', 'undefined', 'EMPTY'])) {
+                    return $cleaned;
+                }
+            }
+        }
+
+        // 2. Check persistent database cache setting if environment variable was not supplied
         $dbKey = Cache::get('system_gemini_api_key');
-        if (!empty($dbKey) && !in_array(trim($dbKey), ['your_gemini_api_key', 'your_api_key_here', 'PLACEHOLDER'])) {
-            return trim($dbKey);
+        if (!empty($dbKey)) {
+            $cleanedDb = trim((string)$dbKey, " \t\n\r\0\x0B\"'");
+            if (!empty($cleanedDb) && !in_array($cleanedDb, ['your_gemini_api_key', 'your_api_key_here', 'PLACEHOLDER', 'null', 'undefined', 'EMPTY'])) {
+                return $cleanedDb;
+            }
         }
 
-        // 2. Check environment config
-        $key = config('services.gemini.key');
-
-        // 3. Fallback to direct process environment if config cache was built without the variable
-        if (empty($key)) {
-            $key = getenv('GEMINI_API_KEY') ?: (getenv('GOOGLE_API_KEY') ?: (getenv('GEMINI_KEY') ?: ($_ENV['GEMINI_API_KEY'] ?? ($_SERVER['GEMINI_API_KEY'] ?? null))));
-        }
-
-        if (empty($key) || in_array(trim($key), ['your_gemini_api_key', 'your_api_key_here', 'PLACEHOLDER'])) {
-            throw new RuntimeException('Gemini API key is not configured. Please add a valid Gemini API key.');
-        }
-
-        return trim($key);
+        throw new RuntimeException('Gemini API key is not configured. Please add a valid Gemini API key.');
     }
 
     /**
@@ -42,15 +54,30 @@ class GeminiService
     {
         $dbModel = Cache::get('system_gemini_model');
         if (!empty($dbModel)) {
-            return trim($dbModel);
+            $cleanedDbModel = trim((string)$dbModel, " \t\n\r\0\x0B\"'");
+            if (!empty($cleanedDbModel)) {
+                return $cleanedDbModel;
+            }
         }
 
-        $model = config('services.gemini.model');
-        if (empty($model)) {
-            $model = getenv('GEMINI_MODEL') ?: (getenv('GOOGLE_MODEL') ?: 'gemini-3.8-flash');
+        $modelCandidates = [
+            config('services.gemini.model'),
+            getenv('GEMINI_MODEL'),
+            getenv('GOOGLE_MODEL'),
+            $_ENV['GEMINI_MODEL'] ?? null,
+            $_SERVER['GEMINI_MODEL'] ?? null,
+        ];
+
+        foreach ($modelCandidates as $candidate) {
+            if (!empty($candidate)) {
+                $cleaned = trim((string)$candidate, " \t\n\r\0\x0B\"'");
+                if (!empty($cleaned)) {
+                    return $cleaned;
+                }
+            }
         }
 
-        return trim($model);
+        return 'gemini-3.8-flash';
     }
 
     /**

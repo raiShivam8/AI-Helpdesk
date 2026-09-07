@@ -205,12 +205,18 @@ class TicketController extends Controller
 
         // Form conversation array from ticket replies in chronological order
         $conversation = $ticket->replies->map(function ($reply) use ($ticket) {
+            $sender = $reply->sender_type === \App\Enums\SenderType::Agent
+                ? ($reply->user?->name ?? 'Agent')
+                : ($ticket->sender_name ?? 'Customer');
+
+            $role = $reply->sender_type instanceof \App\Enums\SenderType
+                ? $reply->sender_type->value
+                : (string) ($reply->sender_type ?? 'user');
+
             return [
-                'sender' => $reply->sender_type === \App\Enums\SenderType::Agent
-                    ? ($reply->user?->name ?? 'Agent')
-                    : $ticket->sender_name,
-                'role' => $reply->sender_type->value,
-                'body' => $reply->body,
+                'sender' => $sender,
+                'role'   => $role,
+                'body'   => trim(strip_tags($reply->body ?? '')),
             ];
         })->toArray();
 
@@ -239,7 +245,7 @@ class TicketController extends Controller
                             ]);
                         }
                     }
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     // Fall back to direct regeneration on cache read failure
                     \Illuminate\Support\Facades\Log::warning('Summary cache read failed, regenerating', [
                         'exception' => $e->getMessage()
@@ -249,23 +255,53 @@ class TicketController extends Controller
 
             // Call the summarizeTicket method on the GeminiService
             $summaryJson = $geminiService->summarizeTicket(
-                $ticket->subject,
-                $ticket->body,
+                $ticket->subject ?? '',
+                $ticket->body ?? '',
                 $conversation
             );
 
-            // Decode the response to ensure it is valid JSON
-            $decodedSummary = json_decode($summaryJson, true);
+            // Clean any potential markdown wrapping
+            $cleanJson = trim($summaryJson);
+            if (preg_match('/^```(?:json)?\s*([\s\S]*?)\s*```$/i', $cleanJson, $matches)) {
+                $cleanJson = trim($matches[1]);
+            }
 
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new \RuntimeException('AI returned invalid structured output.');
+            // Decode the response to ensure it is valid JSON
+            $decodedSummary = json_decode($cleanJson, true);
+
+            // Fallback: Attempt regex extraction if json_decode failed
+            if (json_last_error() !== JSON_ERROR_NONE && preg_match('/\{[\s\S]*\}/', $cleanJson, $matches)) {
+                $decodedSummary = json_decode($matches[0], true);
+            }
+
+            if (!is_array($decodedSummary)) {
+                $decodedSummary = [
+                    'summary' => is_string($cleanJson) && !empty($cleanJson) ? $cleanJson : 'Ticket summary generated successfully.',
+                    'issues' => [],
+                    'actions_taken' => [],
+                    'status' => $ticket->status?->label() ?? 'Open',
+                    'next_step' => 'Review conversation and reply to customer.',
+                ];
+            } else {
+                // Ensure all expected keys are properly structured for the UI template
+                $decodedSummary = [
+                    'summary' => (string) ($decodedSummary['summary'] ?? 'Summary generated successfully.'),
+                    'issues' => is_array($decodedSummary['issues'] ?? null)
+                        ? array_values(array_filter($decodedSummary['issues'], fn($i) => !empty($i)))
+                        : (!empty($decodedSummary['issues']) ? [(string) $decodedSummary['issues']] : []),
+                    'actions_taken' => is_array($decodedSummary['actions_taken'] ?? null)
+                        ? array_values(array_filter($decodedSummary['actions_taken'], fn($a) => !empty($a)))
+                        : (!empty($decodedSummary['actions_taken']) ? [(string) $decodedSummary['actions_taken']] : []),
+                    'status' => (string) ($decodedSummary['status'] ?? ($ticket->status?->label() ?? 'Open')),
+                    'next_step' => (string) ($decodedSummary['next_step'] ?? 'Review conversation and reply to customer.'),
+                ];
             }
 
             // Store summary in cache
             if ($cacheTtl > 0) {
                 try {
                     Cache::store($cacheStore)->put($cacheKey, $decodedSummary, $cacheTtl);
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('Summary cache write failed', [
                         'exception' => $e->getMessage()
                     ]);
@@ -278,7 +314,12 @@ class TicketController extends Controller
                 'cached' => false,
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Ticket summarize failed', [
+                'ticket_id' => $ticket->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage(),

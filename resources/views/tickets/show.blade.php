@@ -143,6 +143,15 @@
                     if (this.isSummarizing) return;
                     this.isSummarizing = true;
                     this.summaryError = null;
+                    
+                    // Smoothly scroll to the AI summary section so user sees the progress
+                    this.$nextTick(() => {
+                        const summaryEl = document.getElementById('ai-summary-card');
+                        if (summaryEl) {
+                            summaryEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                    });
+
                     try {
                         const response = await fetch('{{ route('tickets.summarize', $ticket) }}', {
                             method: 'POST',
@@ -182,30 +191,53 @@
         >
 
             {{-- ── Sender Card ── --}}
-            <div class="card p-5">
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">From</p>
-                <div class="flex items-center gap-3.5">
-                    <div class="avatar avatar-lg bg-amber-100 text-amber-700 font-bold">
-                        {{ strtoupper(substr($ticket->sender_name, 0, 1)) }}
+            <div class="card p-5 flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">From</p>
+                    <div class="flex items-center gap-3.5">
+                        <div class="avatar avatar-lg bg-amber-100 text-amber-700 font-bold">
+                            {{ strtoupper(substr($ticket->sender_name, 0, 1)) }}
+                        </div>
+                        <div>
+                            <p class="font-semibold text-slate-900 dark:text-white text-base leading-tight">{{ $ticket->sender_name }}</p>
+                            <a href="mailto:{{ $ticket->sender_email }}" class="text-sm text-indigo-600 hover:underline mt-0.5 block">
+                                {{ $ticket->sender_email }}
+                            </a>
+                            {{-- Customer badge --}}
+                            <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                Customer
+                            </span>
+                        </div>
                     </div>
-                    <div>
-                        <p class="font-semibold text-slate-900 dark:text-white text-base leading-tight">{{ $ticket->sender_name }}</p>
-                        <a href="mailto:{{ $ticket->sender_email }}" class="text-sm text-indigo-600 hover:underline mt-0.5 block">
-                            {{ $ticket->sender_email }}
-                        </a>
-                        {{-- Customer badge --}}
-                        <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            Customer
-                        </span>
-                    </div>
+                </div>
+
+                {{-- Quick Summarize button on top --}}
+                <div>
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border border-indigo-200 dark:border-indigo-700/60 bg-indigo-50/80 dark:bg-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-2xs cursor-pointer"
+                        :disabled="isSummarizing"
+                        @click="generateSummary(false)"
+                        title="Generate AI-powered summary for this ticket"
+                    >
+                        <svg x-show="isSummarizing" x-cloak class="animate-spin h-3.5 w-3.5 text-indigo-700" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <svg x-show="!isSummarizing" class="w-3.5 h-3.5 text-indigo-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l-1.813-5.096L2.091 14.09 7.187 13.28 9 8.187l1.813 5.096 5.096 1.813-5.096 1.813z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4m-2-2h4" />
+                        </svg>
+                        <span x-text="isSummarizing ? 'Summarizing...' : 'Summarize Ticket'"></span>
+                    </button>
                 </div>
             </div>
 
             {{-- ── AI Summary Card ── --}}
-            <div x-show="summary || isSummarizing || summaryError" x-cloak class="card p-5 border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-r from-indigo-50/30 dark:from-indigo-900/20 to-purple-50/30 dark:to-purple-900/20 shadow-sm space-y-4">
+            <div id="ai-summary-card" x-show="summary || isSummarizing || summaryError" x-cloak class="card p-5 border border-indigo-100 dark:border-indigo-900/50 bg-gradient-to-r from-indigo-50/30 dark:from-indigo-900/20 to-purple-50/30 dark:to-purple-900/20 shadow-sm space-y-4">
                 <div class="flex items-center justify-between border-b border-indigo-100 dark:border-indigo-900/50 pb-3">
                     <div class="flex items-center gap-2">
                         <svg class="w-5 h-5 text-indigo-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -214,7 +246,21 @@
                         </svg>
                         <h3 class="text-sm font-bold text-indigo-900 dark:text-indigo-300 tracking-wide uppercase">AI-Powered Ticket Summary</h3>
                     </div>
-                    <button type="button" @click="summary = null; summaryError = null" class="text-slate-400 hover:text-slate-600 font-bold text-lg leading-none" title="Dismiss Summary">&times;</button>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            x-show="summary && !isSummarizing"
+                            @click="generateSummary(true)"
+                            class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 px-2 py-1 rounded bg-white/70 dark:bg-slate-800/70 border border-indigo-200 dark:border-indigo-800 transition"
+                            title="Regenerate with fresh thread context"
+                        >
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span>Regenerate</span>
+                        </button>
+                        <button type="button" @click="summary = null; summaryError = null" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg leading-none px-1" title="Dismiss Summary">&times;</button>
+                    </div>
                 </div>
 
                 {{-- Loading State spinner --}}
@@ -628,7 +674,7 @@
                     action="{{ route('tickets.replies.store', $ticket) }}"
                     enctype="multipart/form-data"
                     x-data="{
-                        body: '{{ old('body') ? addslashes(old('body')) : '' }}',
+                        body: {!! json_encode(old('body', '')) !!},
                         charCount: {{ strlen(old('body', '')) }},
                         fileName: null,
                         fileSize: null,
@@ -652,7 +698,7 @@
                             $refs.fileInput.value = '';
                         },
                         async polish() {
-                            if (this.body.trim().length === 0 || this.isPolishing) return;
+                            if (!this.body || this.body.trim().length === 0 || this.isPolishing) return;
                             this.isPolishing = true;
                             this.polishError = null;
                             try {
@@ -663,7 +709,7 @@
                                         'Accept': 'application/json',
                                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                                     },
-                                    body: JSON.stringify({ body: this.body })
+                                    body: JSON.stringify({ body: this.body.trim() })
                                 });
                                 
                                 let data = null;
@@ -801,22 +847,23 @@
                                 <span>Attach File / Image</span>
                             </button>
 
-                            {{-- Polish Reply Button --}}
+                            {{-- Polish Message Button --}}
                             <button
                                 type="button"
                                 class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-800 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
-                                :disabled="body.trim().length === 0 || isPolishing"
+                                :disabled="!body || body.trim().length === 0 || isPolishing"
                                 @click="polish()"
+                                title="Polish draft message with Gemini AI"
                             >
-                                <svg x-show="isPolishing" x-cloak class="animate-spin h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24">
+                                <svg x-show="isPolishing" x-cloak class="animate-spin h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                <svg x-show="!isPolishing" class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <svg x-show="!isPolishing" class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l-1.813-5.096L2.091 14.09 7.187 13.28 9 8.187l1.813 5.096 5.096 1.813-5.096 1.813z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4m-2-2h4" />
                                 </svg>
-                                <span x-text="isPolishing ? 'Polishing...' : 'Polish Reply'"></span>
+                                <span x-text="isPolishing ? 'Polishing...' : 'Polish Message'"></span>
                             </button>
 
                             {{-- Post Reply Button --}}

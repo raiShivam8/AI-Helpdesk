@@ -121,14 +121,29 @@ class TicketReplyController extends Controller
             ], 422);
         }
 
+        $bodyText = trim($request->input('body', ''));
+        if ($bodyText === '') {
+            return response()->json([
+                'error' => 'The body field is required.',
+                'errors' => ['body' => ['The body field is required.']],
+            ], 422);
+        }
+
         try {
-            $polished = $geminiService->polishReply($request->input('body'));
+            $polished = $geminiService->polishReply($bodyText);
 
             return response()->json([
+                'success' => true,
                 'polished' => $polished,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Polish reply failed', [
+                'ticket_id' => $ticket->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return response()->json([
+                'success' => false,
                 'error' => $e->getMessage(),
             ], 500);
         }

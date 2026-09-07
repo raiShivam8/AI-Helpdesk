@@ -175,10 +175,13 @@
                             class="w-full text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors shadow-2xs"
                         >
                             <option value="gemini-3.8-flash">gemini-3.8-flash (Latest & Most Intelligent Flash Tier)</option>
-                            <option value="gemini-2.5-flash">gemini-2.5-flash (Fast & High Quality)</option>
-                            <option value="gemini-2.0-flash">gemini-2.0-flash (Fast & Reliable)</option>
-                            <option value="gemini-1.5-flash">gemini-1.5-flash (Stable Legacy Fallback)</option>
+                            <option value="gemini-3.7-flash">gemini-3.7-flash (Next-Gen Hybrid Flash)</option>
+                            <option value="gemini-3.6-flash">gemini-3.6-flash (High Performance & Stable)</option>
+                            <option value="gemini-3.5-flash">gemini-3.5-flash (Fast & Reliable Production)</option>
+                            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Ultra Fast Lightweight)</option>
+                            <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Ultra Low Latency)</option>
                             <option value="gemini-flash-latest">gemini-flash-latest (Always Latest Flash Alias)</option>
+                            <option value="gemini-flash-lite-latest">gemini-flash-lite-latest (Always Latest Lite Alias)</option>
                         </select>
                     </div>
 

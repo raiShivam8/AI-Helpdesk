@@ -93,7 +93,7 @@ class GeminiService
         $chosenModel = !empty($model) ? trim($model) : $this->getModel();
 
         $url = "https://generativelanguage.googleapis.com/v1beta/models/{$chosenModel}:generateContent?key={$key}";
-        $response = Http::timeout(10)->post($url, [
+        $response = Http::timeout(15)->post($url, [
             'contents' => [
                 ['parts' => [['text' => 'ping']]]
             ]
@@ -123,10 +123,11 @@ class GeminiService
      */
     protected function generateContent(string $prompt, array $extraPayload = []): string
     {
-        @set_time_limit(60);
+        @set_time_limit(120);
 
         $apiKey = $this->getApiKey();
-        $timeout = (int) config('services.gemini.timeout', 30);
+        $configuredTimeout = (int) config('services.gemini.timeout', 30);
+        $modelTimeout = max($configuredTimeout, 30);
         $connectTimeout = (int) config('services.gemini.connect_timeout', 10);
         $proxy = config('services.gemini.proxy');
         $ipResolve = config('services.gemini.ip_resolve', 'v4');
@@ -138,15 +139,26 @@ class GeminiService
 
         if ($ipResolve === 'v4') {
             $options['curl'] = [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4];
-            $options['force_ip_resolve'] = 'v4';
         } elseif ($ipResolve === 'v6') {
             $options['curl'] = [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6];
-            $options['force_ip_resolve'] = 'v6';
         }
 
         // Primary model and ordered fallback models for high demand / rate limit resilience
         $primaryModel = $this->getModel();
-        $fallbackModels = array_values(array_unique([$primaryModel, 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest']));
+        $fallbackModels = array_values(array_unique([
+            $primaryModel,
+            'gemini-3.8-flash',
+            'gemini-3.7-flash',
+            'gemini-3.6-flash',
+            'gemini-3.5-flash',
+            'gemini-3.5-flash-lite',
+            'gemini-3.1-flash-lite',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-1.5-flash',
+            'gemini-flash-latest',
+            'gemini-flash-lite-latest',
+        ]));
 
         $payload = array_merge([
             'contents' => [
@@ -168,15 +180,26 @@ class GeminiService
                 Log::info("Sending request to Gemini [Model: {$model}]");
 
                 $response = Http::connectTimeout($connectTimeout)
-                    ->timeout($timeout)
+                    ->timeout($modelTimeout)
                     ->withOptions($options)
                     ->post($url, $payload);
 
                 $duration = round((microtime(true) - $startTime) * 1000, 2);
 
                 if ($response->successful()) {
-                    $text = $response->json('candidates.0.content.parts.0.text');
-                    if (!empty($text)) {
+                    $parts = $response->json('candidates.0.content.parts') ?? [];
+                    $text = '';
+                    foreach ($parts as $part) {
+                        if (isset($part['text'])) {
+                            $text .= $part['text'];
+                        }
+                    }
+
+                    if ($text === '') {
+                        $text = (string) $response->json('candidates.0.content.parts.0.text');
+                    }
+
+                    if (!empty(trim($text))) {
                         Log::info("Gemini API Request Success [Model: {$model}]", [
                             'status' => $response->status(),
                             'duration_ms' => $duration
@@ -185,33 +208,28 @@ class GeminiService
                     }
                 }
 
-                // Handle 429 rate limit with automatic retry after pause
-                if ($response->status() === 429) {
-                    Log::warning("Gemini 429 Rate Limit encountered on model {$model}. Pausing 3 seconds for quota reset...");
-                    sleep(3);
-                    $retryResponse = Http::connectTimeout($connectTimeout)
-                        ->timeout($timeout)
-                        ->withOptions($options)
-                        ->post($url, $payload);
-
-                    if ($retryResponse->successful()) {
-                        $text = $retryResponse->json('candidates.0.content.parts.0.text');
-                        if (!empty($text)) {
-                            Log::info("Gemini API Retry Success [Model: {$model}]");
-                            return trim($text);
-                        }
-                    }
-                }
-
                 $errorMessage = $response->json('error.message') ?? 'HTTP status code: ' . $response->status();
+
+                // If invalid API key, fail immediately without cycling through fallbacks
                 if ($response->status() === 400 && str_contains(strtolower($errorMessage), 'api key')) {
                     throw new RuntimeException('Gemini API Error: ' . $errorMessage);
                 }
+
+                // Handle 429 rate limit or 503 high demand
+                if ($response->status() === 429 || $response->status() === 503) {
+                    Log::warning("Gemini model {$model} returned status {$response->status()} ({$errorMessage}). Trying next available model...");
+                    $lastException = new RuntimeException('Gemini API Error: ' . $errorMessage);
+                    continue;
+                }
+
                 Log::warning("Gemini model {$model} returned error status {$response->status()}: {$errorMessage}. Trying fallback model if available...");
                 $lastException = new RuntimeException('Gemini API Error: ' . $errorMessage);
 
             } catch (\Exception $e) {
                 $duration = round((microtime(true) - $startTime) * 1000, 2);
+                if ($e instanceof RuntimeException && str_contains(strtolower($e->getMessage()), 'api key')) {
+                    throw $e;
+                }
                 Log::warning("Exception calling Gemini model {$model} after {$duration}ms: " . $e->getMessage());
                 $lastException = $e;
             }
@@ -264,25 +282,21 @@ class GeminiService
             }
         }
 
-        $prompt = "You are a professional customer support assistant. " .
-                  "Your task is to polish the following draft reply for a helpdesk ticket to make it more professional, polite, clear, and grammatically correct while preserving its original meaning. " .
-                  "Return ONLY the final polished text. Do not wrap the response in markdown backticks, quotes, or include any extra conversational filler/explanations.\n\n" .
+        $prompt = "You are a professional customer support assistant.\n" .
+                  "Your task is to polish the following draft reply for a helpdesk ticket to make it professional, polite, clear, empathetic, and grammatically correct while preserving its original meaning and all factual details.\n" .
+                  "Return ONLY the polished message. Do not include quotes, markdown backticks (```), prefixes, or explanatory conversational filler.\n\n" .
                   "Draft Reply:\n" . $text;
 
         $reply = $this->generateContent($prompt);
 
-        // Clean up any residual formatting or quotes if Gemini returned them
-        if (str_starts_with($reply, '```')) {
-            $lines = explode("\n", $reply);
-            if (count($lines) >= 3) {
-                array_shift($lines); // Remove opening ```
-                array_pop($lines);   // Remove closing ```
-                $reply = trim(implode("\n", $lines));
-            }
+        // Clean up any residual markdown formatting or code blocks if Gemini returned them
+        $reply = trim($reply);
+        if (preg_match('/^```(?:markdown|text)?\s*([\s\S]*?)\s*```$/i', $reply, $matches)) {
+            $reply = trim($matches[1]);
         }
 
         // Strip enclosing outer quotes if any
-        if (preg_match('/^["\'](.*)["\']$/s', $reply, $matches)) {
+        if (preg_match('/^["\']([\s\S]*)["\']$/s', $reply, $matches)) {
             $reply = trim($matches[1]);
         }
 
@@ -317,10 +331,10 @@ class GeminiService
         }
 
         $prompt = "You are a customer support analysis assistant. Analyze the following helpdesk ticket and generate a structured JSON summary.\n\n" .
-                  "Ticket Subject: {$subject}\n" .
-                  "Original Customer Message: {$customerMessage}\n" .
-                  "Conversation Thread:\n{$conversationText}\n\n" .
-                  "Return a JSON object with exactly the following keys:\n" .
+                  "Ticket Subject: " . ($subject !== '' ? $subject : '(No Subject)') . "\n" .
+                  "Original Customer Message: " . ($customerMessage !== '' ? $customerMessage : '(No Initial Message)') . "\n" .
+                  "Conversation Thread:\n" . ($conversationText !== '' ? $conversationText : '(No additional conversation replies yet)') . "\n\n" .
+                  "Return a valid JSON object with exactly the following keys:\n" .
                   "{\n" .
                   "  \"summary\": \"A concise, single-paragraph summary of the ticket and conversation history.\",\n" .
                   "  \"issues\": [\"List of important customer issues identified from the messages.\"],\n" .
@@ -329,11 +343,19 @@ class GeminiService
                   "  \"next_step\": \"The single most important suggested next step for the agent.\"\n" .
                   "}";
 
-        return $this->generateContent($prompt, [
+        $result = $this->generateContent($prompt, [
             'generationConfig' => [
                 'responseMimeType' => 'application/json',
             ]
         ]);
+
+        // Clean any code block wrappers
+        $trimmed = trim($result);
+        if (preg_match('/^```(?:json)?\s*([\s\S]*?)\s*```$/i', $trimmed, $matches)) {
+            $trimmed = trim($matches[1]);
+        }
+
+        return $trimmed;
     }
 
     /**

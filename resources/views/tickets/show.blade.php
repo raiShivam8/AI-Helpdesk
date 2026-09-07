@@ -231,7 +231,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l-1.813-5.096L2.091 14.09 7.187 13.28 9 8.187l1.813 5.096 5.096 1.813-5.096 1.813z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4m-2-2h4" />
                         </svg>
-                        <span x-text="isSummarizing ? 'Summarizing...' : 'Summarize Ticket'"></span>
+                        <span x-text="isSummarizing ? 'Summarizing...' : 'Summarize Ticket'">Summarize Ticket</span>
                     </button>
                 </div>
             </div>
@@ -759,6 +759,7 @@
 
                         <textarea
                             id="reply-body"
+                            x-ref="replyTextarea"
                             name="body"
                             rows="5"
                             maxlength="2000"
@@ -850,20 +851,20 @@
                             {{-- Polish Message Button --}}
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-800 dark:hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition duration-150"
+                                class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg border border-purple-200 dark:border-purple-800/80 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-2xs cursor-pointer"
                                 :disabled="!body || body.trim().length === 0 || isPolishing"
                                 @click="polish()"
                                 title="Polish draft message with Gemini AI"
                             >
-                                <svg x-show="isPolishing" x-cloak class="animate-spin h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                                <svg x-show="isPolishing" x-cloak class="animate-spin h-4 w-4 text-purple-600 dark:text-purple-300 shrink-0" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                <svg x-show="!isPolishing" class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <svg x-show="!isPolishing" class="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 21l-1.813-5.096L2.091 14.09 7.187 13.28 9 8.187l1.813 5.096 5.096 1.813-5.096 1.813z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4m-2-2h4" />
                                 </svg>
-                                <span x-text="isPolishing ? 'Polishing...' : 'Polish Message'"></span>
+                                <span x-text="isPolishing ? 'Polishing...' : 'Polish Message'">Polish Message</span>
                             </button>
 
                             {{-- Post Reply Button --}}

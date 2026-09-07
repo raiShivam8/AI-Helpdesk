@@ -40,11 +40,11 @@ return [
 
     'gemini' => [
         'key' => env('GEMINI_API_KEY', env('GOOGLE_API_KEY', env('GEMINI_KEY'))),
-        'model' => env('GEMINI_MODEL', env('GOOGLE_MODEL', 'gemini-3.8-flash')),
-        'timeout' => env('GEMINI_TIMEOUT', 30),
-        'connect_timeout' => env('GEMINI_CONNECT_TIMEOUT', 10),
+        'model' => env('GEMINI_MODEL', env('GOOGLE_MODEL', 'gemini-2.5-flash')),
+        'timeout' => (int) env('GEMINI_TIMEOUT', 30),
+        'connect_timeout' => (int) env('GEMINI_CONNECT_TIMEOUT', 10),
         'proxy' => env('GEMINI_PROXY'),
-        'ip_resolve' => env('GEMINI_IP_RESOLVE', 'v4'),
+        'ip_resolve' => env('GEMINI_IP_RESOLVE', null),
         'cache_store' => env('GEMINI_CACHE_STORE', 'file'),
         'cache_ttl' => (int) env('GEMINI_CACHE_TTL', 86400),
     ],

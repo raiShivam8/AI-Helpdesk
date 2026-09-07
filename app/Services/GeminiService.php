@@ -52,10 +52,12 @@ class GeminiService
      */
     public function getModel(): string
     {
+        $invalidModels = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+
         $dbModel = Cache::get('system_gemini_model');
         if (!empty($dbModel)) {
             $cleanedDbModel = trim((string)$dbModel, " \t\n\r\0\x0B\"'");
-            if (!empty($cleanedDbModel)) {
+            if (!empty($cleanedDbModel) && !in_array($cleanedDbModel, $invalidModels)) {
                 return $cleanedDbModel;
             }
         }
@@ -71,13 +73,13 @@ class GeminiService
         foreach ($modelCandidates as $candidate) {
             if (!empty($candidate)) {
                 $cleaned = trim((string)$candidate, " \t\n\r\0\x0B\"'");
-                if (!empty($cleaned)) {
+                if (!empty($cleaned) && !in_array($cleaned, $invalidModels)) {
                     return $cleaned;
                 }
             }
         }
 
-        return 'gemini-3.8-flash';
+        return 'gemini-2.5-flash';
     }
 
     /**
@@ -130,7 +132,7 @@ class GeminiService
         $modelTimeout = max($configuredTimeout, 30);
         $connectTimeout = (int) config('services.gemini.connect_timeout', 10);
         $proxy = config('services.gemini.proxy');
-        $ipResolve = config('services.gemini.ip_resolve', 'v4');
+        $ipResolve = config('services.gemini.ip_resolve');
 
         $options = [];
         if (!empty($proxy)) {
@@ -143,21 +145,16 @@ class GeminiService
             $options['curl'] = [CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V6];
         }
 
-        // Primary model and ordered fallback models for high demand / rate limit resilience
+        // Primary model and verified fallback models for high demand / rate limit resilience
         $primaryModel = $this->getModel();
         $fallbackModels = array_values(array_unique([
             $primaryModel,
-            'gemini-3.8-flash',
-            'gemini-3.7-flash',
-            'gemini-3.6-flash',
-            'gemini-3.5-flash',
-            'gemini-3.5-flash-lite',
-            'gemini-3.1-flash-lite',
             'gemini-2.5-flash',
             'gemini-2.0-flash',
             'gemini-1.5-flash',
-            'gemini-flash-latest',
-            'gemini-flash-lite-latest',
+            'gemini-2.5-flash-lite',
+            'gemini-1.5-pro',
+            'gemini-2.5-pro',
         ]));
 
         $payload = array_merge([

@@ -45,46 +45,28 @@ for v in GEMINI_API_KEY GOOGLE_API_KEY GEMINI_KEY GEMINI_MODEL GEMINI_TIMEOUT GE
     sync_env_var "$v"
 done
 
-# Normalize bare Render PostgreSQL internal host (dpg-*-a) to regional domain
-RENDER_PG_REGION="${RENDER_REGION:-oregon}"
-export RENDER_PG_REGION
-if [ -n "$DATABASE_URL" ] || [ -n "$DB_HOST" ]; then
-    RESOLVED_URL=$(php -r '
-        $u = getenv("DATABASE_URL") ?: "";
-        $reg = getenv("RENDER_PG_REGION") ?: "oregon";
-        if ($u && preg_match("/@(dpg-[a-z0-9]+-a)(:[0-9]+|\/|$)/i", $u, $m)) {
-            $h = $m[1];
-            $target = "{$h}.{$reg}-postgres.render.com";
-            echo str_replace("@" . $h, "@" . $target, $u);
+# Normalize bare Render PostgreSQL internal host (dpg-*-a) in .env directly
+php -r '
+    $envFile = "/var/www/html/.env";
+    if (file_exists($envFile)) {
+        $c = file_get_contents($envFile);
+        $region = getenv("RENDER_REGION") ?: "oregon";
+        $updated = preg_replace("/(dpg-[a-z0-9]+-a)(?!\.)/i", "\$1.{$region}-postgres.render.com", $c);
+        if ($updated !== $c) {
+            file_put_contents($envFile, $updated);
+            echo "🌐 Normalized Render PostgreSQL host in .env to use .{$region}-postgres.render.com\n";
         }
-    ' 2>/dev/null || true)
+    }
+' || true
 
-    if [ -n "$RESOLVED_URL" ]; then
-        export DATABASE_URL="$RESOLVED_URL"
-        if grep -q "^DATABASE_URL=" /var/www/html/.env 2>/dev/null; then
-            sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${RESOLVED_URL}|g" /var/www/html/.env
-        else
-            echo "DATABASE_URL=${RESOLVED_URL}" >> /var/www/html/.env
-        fi
-        echo "🌐 Auto-resolved Render DATABASE_URL with reachable host domain."
+if [ -f "/var/www/html/.env" ]; then
+    DB_URL_VAL=$(grep '^DATABASE_URL=' /var/www/html/.env 2>/dev/null | cut -d '=' -f2-)
+    if [ -n "$DB_URL_VAL" ]; then
+        export DATABASE_URL="$DB_URL_VAL"
     fi
-
-    RESOLVED_HOST=$(php -r '
-        $h = getenv("DB_HOST") ?: "";
-        $reg = getenv("RENDER_PG_REGION") ?: "oregon";
-        if ($h && str_starts_with($h, "dpg-") && !str_contains($h, ".")) {
-            echo "{$h}.{$reg}-postgres.render.com";
-        }
-    ' 2>/dev/null || true)
-
-    if [ -n "$RESOLVED_HOST" ]; then
-        export DB_HOST="$RESOLVED_HOST"
-        if grep -q "^DB_HOST=" /var/www/html/.env 2>/dev/null; then
-            sed -i "s|^DB_HOST=.*|DB_HOST=${RESOLVED_HOST}|g" /var/www/html/.env
-        else
-            echo "DB_HOST=${RESOLVED_HOST}" >> /var/www/html/.env
-        fi
-        echo "🌐 Auto-resolved Render DB_HOST to ${RESOLVED_HOST}."
+    DB_HOST_VAL=$(grep '^DB_HOST=' /var/www/html/.env 2>/dev/null | cut -d '=' -f2-)
+    if [ -n "$DB_HOST_VAL" ]; then
+        export DB_HOST="$DB_HOST_VAL"
     fi
 fi
 
@@ -130,6 +112,23 @@ php artisan view:clear || true
 php artisan package:discover --ansi || true
 php artisan config:cache || true
 php artisan route:cache || true
+
+echo "📦 Testing database connection..."
+php -r '
+    require "/var/www/html/vendor/autoload.php";
+    $app = require_once "/var/www/html/bootstrap/app.php";
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+    
+    $c = config("database.connections.pgsql");
+    echo "🔍 PGSQL Config: host=" . ($c["host"] ?? "none") . " port=" . ($c["port"] ?? "none") . " db=" . ($c["database"] ?? "none") . " user=" . ($c["username"] ?? "none") . "\n";
+    try {
+        Illuminate\Support\Facades\DB::connection("pgsql")->getPdo();
+        echo "✅ Database connection SUCCESS!\n";
+    } catch (\Throwable $e) {
+        echo "❌ Database connection FAILED: " . $e->getMessage() . "\n";
+    }
+' || true
 
 echo "📦 Running database migrations and seeders..."
 MAX_RETRIES=5

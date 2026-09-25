@@ -89,8 +89,26 @@ php artisan config:cache || true
 php artisan route:cache || true
 
 echo "📦 Running database migrations and seeders..."
-php artisan migrate --force
-php artisan db:seed --force || true
+MAX_RETRIES=5
+RETRY_COUNT=0
+MIGRATION_SUCCESS=0
+
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if php artisan migrate --force; then
+        MIGRATION_SUCCESS=1
+        php artisan db:seed --force || true
+        break
+    else
+        RETRY_COUNT=$((RETRY_COUNT + 1))
+        echo "⚠️ Database migration attempt $RETRY_COUNT/$MAX_RETRIES failed. Retrying in 4 seconds..."
+        sleep 4
+    fi
+done
+
+if [ $MIGRATION_SUCCESS -eq 0 ]; then
+    echo "⚠️ Warning: Database migrations could not be completed after $MAX_RETRIES attempts."
+    echo "⚠️ Please check your Render DATABASE_URL / DB_HOST connection settings and region."
+fi
 
 echo "🔒 Setting permissions for www-data and Nginx temp dirs..."
 mkdir -p /var/lib/nginx/tmp /var/log/nginx /var/tmp/nginx /tmp

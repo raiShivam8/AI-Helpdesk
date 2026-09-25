@@ -40,7 +40,8 @@ return [
 
     'gemini' => [
         'key' => env('GEMINI_API_KEY', env('GOOGLE_API_KEY', env('GEMINI_KEY'))),
-        'model' => env('GEMINI_MODEL', env('GOOGLE_MODEL', 'gemini-2.5-flash')),
+        'api_key' => env('GEMINI_API_KEY', env('GOOGLE_API_KEY', env('GEMINI_KEY'))),
+        'model' => env('GEMINI_MODEL', env('GOOGLE_MODEL', 'gemini-3.7-flash')),
         'timeout' => (int) env('GEMINI_TIMEOUT', 30),
         'connect_timeout' => (int) env('GEMINI_CONNECT_TIMEOUT', 10),
         'proxy' => env('GEMINI_PROXY'),

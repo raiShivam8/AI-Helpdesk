@@ -532,6 +532,9 @@
             </div>
         </div>
 
+        {{-- Global Gemini AI Configuration Modal --}}
+        <x-gemini-config-modal />
+
         @stack('scripts')
     </body>
 </html>

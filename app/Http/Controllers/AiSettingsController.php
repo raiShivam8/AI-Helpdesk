@@ -54,13 +54,32 @@ class AiSettingsController extends Controller
     }
 
     /**
+     * Get current Gemini AI config details for modals/components
+     */
+    public function config(GeminiService $geminiService): JsonResponse
+    {
+        $hasKey = $geminiService->hasApiKey();
+        $rawKey = $geminiService->getApiKey();
+        $len = strlen($rawKey);
+        $maskedKey = $len > 10 ? substr($rawKey, 0, 6) . '...' . substr($rawKey, -4) : '******';
+
+        return response()->json([
+            'has_key' => $hasKey,
+            'masked_key' => $maskedKey,
+            'active_model' => $geminiService->getModel(),
+            'default_model' => GeminiService::DEFAULT_MODEL,
+            'supported_models' => GeminiService::SUPPORTED_MODELS,
+        ]);
+    }
+
+    /**
      * Validate and save the Gemini API key and model
      */
     public function update(Request $request, GeminiService $geminiService): RedirectResponse|JsonResponse
     {
         $request->validate([
             'gemini_api_key' => ['required', 'string', 'min:10'],
-            'gemini_model' => ['required', 'string', 'in:gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-flash-latest,gemini-flash-lite-latest,gemini-2.5-flash,gemini-2.0-flash,gemini-1.5-flash'],
+            'gemini_model' => ['required', 'string'],
         ]);
 
         try {
@@ -95,7 +114,7 @@ class AiSettingsController extends Controller
     public function test(Request $request): JsonResponse
     {
         $key = trim($request->input('key', ''));
-        $model = trim($request->input('model', 'gemini-3.8-flash'));
+        $model = trim($request->input('model', 'gemini-3.7-flash'));
 
         if (empty($key)) {
             return response()->json([

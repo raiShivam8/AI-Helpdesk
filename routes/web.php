@@ -85,6 +85,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets/{ticket}/polish-reply', [\App\Http\Controllers\TicketReplyController::class, 'polish'])->name('tickets.polish-reply');
     Route::post('/tickets/{ticket}/summarize', [\App\Http\Controllers\TicketController::class, 'summarize'])->name('tickets.summarize');
     Route::post('/tickets/{ticket}/try-ai-resolve', [\App\Http\Controllers\TicketController::class, 'tryAiResolve'])->name('tickets.try-ai-resolve');
+
+    // AI Configuration Modal Endpoints
+    Route::get('/ai/config', [\App\Http\Controllers\AiSettingsController::class, 'config'])->name('ai.config');
+    Route::post('/ai/test-key', [\App\Http\Controllers\AiSettingsController::class, 'test'])->name('ai.test-key');
+    Route::post('/ai/save-key', [\App\Http\Controllers\AiSettingsController::class, 'update'])->name('ai.save-key');
+
     // Notifications
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{notification}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');

@@ -59,35 +59,39 @@ class AppServiceProvider extends ServiceProvider
             return $user->isAdmin();
         });
 
-        // High-availability Database connection check with automatic SQLite fallback
-        $defaultConn = config('database.default');
-        $sqlitePath = database_path('database.sqlite');
-        if (!file_exists($sqlitePath)) {
-            @touch($sqlitePath);
-            @chmod($sqlitePath, 0777);
+        // High-availability Database connection check with automatic SQLite fallback (production/runtime only)
+        if (!$this->app->runningUnitTests()) {
+            $defaultConn = config('database.default');
+            $sqlitePath = database_path('database.sqlite');
+            if (!file_exists($sqlitePath)) {
+                @touch($sqlitePath);
+                @chmod($sqlitePath, 0777);
+            }
+
+            if ($defaultConn !== 'sqlite') {
+                try {
+                    \Illuminate\Support\Facades\DB::connection($defaultConn)->getPdo();
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Primary DB connection ({$defaultConn}) unreachable: " . $e->getMessage() . ". Switching to SQLite fallback.");
+                    config([
+                        'database.default' => 'sqlite',
+                        'database.connections.sqlite.database' => $sqlitePath,
+                    ]);
+                    \Illuminate\Support\Facades\DB::purge();
+                }
+            }
         }
 
-        if ($defaultConn !== 'sqlite') {
+        // Ensure database tables and seed data exist (skip during automated tests)
+        if (!$this->app->runningUnitTests()) {
             try {
-                \Illuminate\Support\Facades\DB::connection($defaultConn)->getPdo();
+                if (!\Illuminate\Support\Facades\Schema::hasTable('users') || \App\Models\User::count() === 0) {
+                    \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                    \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+                }
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Primary DB connection ({$defaultConn}) unreachable: " . $e->getMessage() . ". Switching to SQLite fallback.");
-                config([
-                    'database.default' => 'sqlite',
-                    'database.connections.sqlite.database' => $sqlitePath,
-                ]);
-                \Illuminate\Support\Facades\DB::purge();
+                \Illuminate\Support\Facades\Log::warning('AppServiceProvider auto-migration notice: ' . $e->getMessage());
             }
-        }
-
-        // Ensure database tables and seed data exist
-        try {
-            if (!\Illuminate\Support\Facades\Schema::hasTable('users') || \App\Models\User::count() === 0) {
-                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-                \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
-            }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('AppServiceProvider auto-migration notice: ' . $e->getMessage());
         }
     }
 }

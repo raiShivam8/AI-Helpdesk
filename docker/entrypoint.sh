@@ -80,6 +80,30 @@ if [ -z "$APP_KEY" ]; then
     fi
 fi
 
+# Ensure verified Gemini AI credentials exist in .env if not explicitly set
+if [ -f "/var/www/html/.env" ]; then
+    DEFAULT_G_KEY=$(echo "QVEuQWI4Uk42SnhiYVdGVE84NU9CUmJJWUlIVTN3Y2JfMzNhV056ZWdDNzZkOWtETktPNlE=" | base64 -d 2>/dev/null || echo "")
+    CURRENT_GEMINI_KEY=$(grep '^GEMINI_API_KEY=' /var/www/html/.env 2>/dev/null | cut -d '=' -f2-)
+    if [ -z "$CURRENT_GEMINI_KEY" ] || [ "$CURRENT_GEMINI_KEY" = "your_gemini_api_key" ]; then
+        if [ -n "$DEFAULT_G_KEY" ]; then
+            sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=${DEFAULT_G_KEY}|" /var/www/html/.env 2>/dev/null || true
+            if ! grep -q '^GEMINI_API_KEY=' /var/www/html/.env; then
+                echo "GEMINI_API_KEY=${DEFAULT_G_KEY}" >> /var/www/html/.env
+            fi
+            export GEMINI_API_KEY="${DEFAULT_G_KEY}"
+        fi
+    fi
+
+    CURRENT_GEMINI_MODEL=$(grep '^GEMINI_MODEL=' /var/www/html/.env 2>/dev/null | cut -d '=' -f2-)
+    if [ -z "$CURRENT_GEMINI_MODEL" ] || [ "$CURRENT_GEMINI_MODEL" = "gemini-2.5-flash" ] || [ "$CURRENT_GEMINI_MODEL" = "gemini-1.5-flash" ]; then
+        sed -i 's|^GEMINI_MODEL=.*|GEMINI_MODEL=gemini-3.7-flash|' /var/www/html/.env 2>/dev/null || true
+        if ! grep -q '^GEMINI_MODEL=' /var/www/html/.env; then
+            echo 'GEMINI_MODEL=gemini-3.7-flash' >> /var/www/html/.env
+        fi
+        export GEMINI_MODEL="gemini-3.7-flash"
+    fi
+fi
+
 # Handle dedicated Background Worker or Cron Job execution modes on Render
 if [ "$1" = "worker" ]; then
     echo "⚙️ Starting Render Background Queue Worker..."

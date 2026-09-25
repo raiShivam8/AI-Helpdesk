@@ -214,8 +214,21 @@
                     </div>
                 </div>
 
-                {{-- Quick Summarize button on top --}}
-                <div>
+                {{-- Quick Summarize button & AI Settings on top --}}
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        @click="$dispatch('open-modal', 'gemini-config-modal')"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 shadow-2xs transition cursor-pointer"
+                        title="Configure Gemini AI Key & Models"
+                    >
+                        <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>AI Settings</span>
+                    </button>
+
                     <button
                         type="button"
                         class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border border-indigo-200 dark:border-indigo-700/60 bg-indigo-50/80 dark:bg-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-2xs cursor-pointer"
@@ -273,14 +286,23 @@
                 </div>
 
                 {{-- Error Banner --}}
-                <div x-show="summaryError" class="p-3 bg-red-50 border border-red-200 text-xs text-red-800 rounded-lg flex items-center justify-between">
+                <div x-show="summaryError" class="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-800 dark:text-red-300 rounded-xl flex items-center justify-between gap-3 shadow-xs">
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                         </svg>
                         <span x-text="summaryError"></span>
                     </div>
-                    <button type="button" @click="summaryError = null" class="text-red-600 hover:text-red-900 font-bold leading-none">&times;</button>
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            @click="$dispatch('open-modal', 'gemini-config-modal')"
+                            class="px-2.5 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/60 text-red-800 dark:text-red-200 rounded-lg font-bold text-[11px] transition shrink-0 cursor-pointer"
+                        >
+                            Configure AI Key
+                        </button>
+                        <button type="button" @click="summaryError = null" class="text-red-600 hover:text-red-900 font-bold leading-none">&times;</button>
+                    </div>
                 </div>
 
                 {{-- Summary Sections --}}
@@ -617,11 +639,24 @@
             </div>
             @endif
 
-            {{-- ── Summarize Button ── --}}
-            <div class="flex justify-end mt-4 mb-2">
+            {{-- ── Summarize Button & AI Settings ── --}}
+            <div class="flex items-center justify-end gap-2 mt-4 mb-2">
                 <button
                     type="button"
-                    class="inline-flex items-center gap-1.5 px-4.5 py-2 text-sm font-semibold rounded-lg border border-indigo-200 dark:border-indigo-700/60 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-sm"
+                    @click="$dispatch('open-modal', 'gemini-config-modal')"
+                    class="inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-600 dark:text-slate-300 shadow-2xs transition cursor-pointer"
+                    title="Configure Gemini AI Key & Models"
+                >
+                    <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>AI Settings</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 px-4.5 py-2 text-sm font-semibold rounded-lg border border-indigo-200 dark:border-indigo-700/60 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-sm cursor-pointer"
                     :disabled="isSummarizing"
                     @click="generateSummary(false)"
                 >
@@ -678,14 +713,23 @@
                     @csrf
 
                     {{-- Error banner for API failure --}}
-                    <div x-show="polishError" x-cloak class="mb-3.5 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-xs text-red-800 dark:text-red-300 rounded-xl flex items-center justify-between shadow-xs">
+                    <div x-show="polishError" x-cloak class="mb-3.5 p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-xs text-red-800 dark:text-red-300 rounded-xl flex items-center justify-between gap-3 shadow-xs">
                         <div class="flex items-center gap-2 min-w-0">
                             <svg class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                             </svg>
                             <span class="truncate" x-text="polishError"></span>
                         </div>
-                        <button type="button" @click="polishError = null" class="text-red-600 hover:text-red-900 dark:text-red-400 font-bold ml-3 text-sm">&times;</button>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button
+                                type="button"
+                                @click="$dispatch('open-modal', 'gemini-config-modal')"
+                                class="px-2.5 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/60 text-red-800 dark:text-red-200 rounded-lg font-bold text-[11px] transition cursor-pointer"
+                            >
+                                Configure AI
+                            </button>
+                            <button type="button" @click="polishError = null" class="text-red-600 hover:text-red-900 dark:text-red-400 font-bold ml-1 text-sm">&times;</button>
+                        </div>
                     </div>
 
                     {{-- Friendly Notice (e.g. empty draft) --}}
@@ -833,6 +877,19 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 3v4m-2-2h4" />
                                 </svg>
                                 <span x-text="isPolishing ? 'Polishing...' : 'Polish Message'">Polish Message</span>
+                            </button>
+
+                            {{-- Quick AI Settings Trigger --}}
+                            <button
+                                type="button"
+                                @click="$dispatch('open-modal', 'gemini-config-modal')"
+                                class="inline-flex items-center justify-center p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 shadow-2xs transition cursor-pointer"
+                                title="Configure Gemini AI Key & Models"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
                             </button>
 
                             {{-- Post Reply Button --}}

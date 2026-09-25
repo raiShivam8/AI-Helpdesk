@@ -19,7 +19,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: "false"
+        value: "true"
       - key: APP_KEY
         generateValue: true
       - key: APP_URL
@@ -33,11 +33,11 @@ services:
       - key: DB_SSLMODE
         value: require
       - key: SESSION_DRIVER
-        value: database
+        value: file
       - key: QUEUE_CONNECTION
         value: database
       - key: CACHE_STORE
-        value: database
+        value: file
       - key: FILESYSTEM_DISK
         value: local
       - key: LOG_CHANNEL
@@ -116,7 +116,7 @@ services:
       - key: QUEUE_CONNECTION
         value: database
       - key: CACHE_STORE
-        value: database
+        value: file
       - key: LOG_CHANNEL
         value: stderr
       - key: SUPPORT_EMAIL
@@ -185,7 +185,7 @@ services:
       - key: QUEUE_CONNECTION
         value: database
       - key: CACHE_STORE
-        value: database
+        value: file
       - key: LOG_CHANNEL
         value: stderr
       - key: SUPPORT_EMAIL

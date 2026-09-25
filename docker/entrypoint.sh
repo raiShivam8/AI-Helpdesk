@@ -45,20 +45,17 @@ for v in GEMINI_API_KEY GOOGLE_API_KEY GEMINI_KEY GEMINI_MODEL GEMINI_TIMEOUT GE
     sync_env_var "$v"
 done
 
-# Normalize bare Render PostgreSQL internal host (dpg-*-a) if unresolvable
+# Normalize bare Render PostgreSQL internal host (dpg-*-a) to regional domain
+RENDER_PG_REGION="${RENDER_REGION:-oregon}"
+export RENDER_PG_REGION
 if [ -n "$DATABASE_URL" ] || [ -n "$DB_HOST" ]; then
     RESOLVED_URL=$(php -r '
         $u = getenv("DATABASE_URL") ?: "";
+        $reg = getenv("RENDER_PG_REGION") ?: "oregon";
         if ($u && preg_match("/@(dpg-[a-z0-9]+-a)(:[0-9]+|\/|$)/i", $u, $m)) {
             $h = $m[1];
-            if (gethostbyname($h) === $h) {
-                $target = "{$h}.oregon-postgres.render.com";
-                foreach (["oregon", "frankfurt", "singapore", "ohio", "virginia"] as $r) {
-                    $c = "{$h}.{$r}-postgres.render.com";
-                    if (gethostbyname($c) !== $c) { $target = $c; break; }
-                }
-                echo str_replace("@" . $h, "@" . $target, $u);
-            }
+            $target = "{$h}.{$reg}-postgres.render.com";
+            echo str_replace("@" . $h, "@" . $target, $u);
         }
     ' 2>/dev/null || true)
 
@@ -74,15 +71,9 @@ if [ -n "$DATABASE_URL" ] || [ -n "$DB_HOST" ]; then
 
     RESOLVED_HOST=$(php -r '
         $h = getenv("DB_HOST") ?: "";
+        $reg = getenv("RENDER_PG_REGION") ?: "oregon";
         if ($h && str_starts_with($h, "dpg-") && !str_contains($h, ".")) {
-            if (gethostbyname($h) === $h) {
-                $target = "{$h}.oregon-postgres.render.com";
-                foreach (["oregon", "frankfurt", "singapore", "ohio", "virginia"] as $r) {
-                    $c = "{$h}.{$r}-postgres.render.com";
-                    if (gethostbyname($c) !== $c) { $target = $c; break; }
-                }
-                echo $target;
-            }
+            echo "{$h}.{$reg}-postgres.render.com";
         }
     ' 2>/dev/null || true)
 

@@ -5,16 +5,8 @@ use Pdo\Mysql;
 
 $resolveRenderHost = static function (string $host): string {
     if (str_starts_with($host, 'dpg-') && !str_contains($host, '.')) {
-        if (gethostbyname($host) === $host) {
-            $regions = ['oregon', 'frankfurt', 'singapore', 'ohio', 'virginia'];
-            foreach ($regions as $region) {
-                $candidate = "{$host}.{$region}-postgres.render.com";
-                if (gethostbyname($candidate) !== $candidate) {
-                    return $candidate;
-                }
-            }
-            return "{$host}.oregon-postgres.render.com";
-        }
+        $region = env('RENDER_REGION', 'oregon');
+        return "{$host}.{$region}-postgres.render.com";
     }
     return $host;
 };

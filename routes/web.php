@@ -48,7 +48,11 @@ Route::get('/health-debug', function () {
     $results['cache_store'] = config('cache.default');
 
     return response()->json($results, 200, [], JSON_PRETTY_PRINT);
-});
+})->withoutMiddleware([
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\Cookie\Middleware\EncryptCookies::class,
+    \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+]);
 
 Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])

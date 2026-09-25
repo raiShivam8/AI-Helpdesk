@@ -21,12 +21,9 @@ Route::match(['get', 'post'], '/api/debug-db', function () {
         $results['db_host'] = config('database.connections.pgsql.host');
 
         // Check tables
-        $tables = \Illuminate\Support\Facades\DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema='public'");
+        $tables = \Illuminate\Support\Facades\Schema::getTableListing();
         $results['tables_count'] = count($tables);
-        $results['tables'] = array_map(function ($t) {
-            $arr = (array) $t;
-            return $arr['table_name'] ?? json_encode($t);
-        }, $tables);
+        $results['tables'] = $tables;
 
         // Check users
         try {

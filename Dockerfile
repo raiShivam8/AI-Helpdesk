@@ -52,6 +52,8 @@ RUN apk add --no-cache \
     nginx \
     curl \
     git \
+    ca-certificates \
+    openssl \
     libpng \
     libpng-dev \
     libjpeg-turbo \
@@ -62,11 +64,13 @@ RUN apk add --no-cache \
     libzip-dev \
     postgresql-libs \
     postgresql-dev \
+    postgresql-client \
     icu-libs \
     icu-dev \
     oniguruma-dev \
     linux-headers \
-    $PHPIZE_DEPS
+    $PHPIZE_DEPS \
+    && update-ca-certificates
 
 
 # Install PHP extensions
@@ -92,6 +96,8 @@ RUN { \
     echo 'upload_max_filesize=64M'; \
     echo 'post_max_size=64M'; \
     echo 'max_execution_time=300'; \
+    echo 'openssl.cafile=/etc/ssl/certs/ca-certificates.crt'; \
+    echo 'openssl.capath=/etc/ssl/certs'; \
     } > /usr/local/etc/php/conf.d/custom.ini
 
 

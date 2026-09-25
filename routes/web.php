@@ -7,43 +7,52 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::get('/health-debug', function () {
+Route::match(['get', 'post'], '/api/debug-db', function () {
     $results = [];
-
-    // 1. App Configuration
     $results['app_key_set'] = !empty(config('app.key'));
     $results['app_env'] = config('app.env');
     $results['app_debug'] = config('app.debug');
 
-    // 2. Database Connection Test
     try {
         \Illuminate\Support\Facades\DB::connection()->getPdo();
         $results['db_connection'] = 'SUCCESS';
         $results['db_driver'] = \Illuminate\Support\Facades\DB::connection()->getDriverName();
         $results['db_database'] = \Illuminate\Support\Facades\DB::connection()->getDatabaseName();
+        $results['db_host'] = config('database.connections.pgsql.host');
 
-        // Check if tables exist
+        // Check tables
         $tables = \Illuminate\Support\Facades\DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema='public'");
         $results['tables_count'] = count($tables);
         $results['tables'] = array_map(function ($t) {
-            return is_object($t) ? ($t->table_name ?? reset($t)) : ($t['table_name'] ?? reset($t));
+            $arr = (array) $t;
+            return $arr['table_name'] ?? json_encode($t);
         }, $tables);
 
-        // Run migrations and seeds on demand if requested
-        if (request()->query('migrate') === 'yes') {
+        // Check users
+        try {
+            $results['users_count'] = \App\Models\User::count();
+            $results['admin_user'] = \App\Models\User::where('email', 'admin@gmail.com')->first(['id', 'email', 'name', 'role']);
+        } catch (\Throwable $ue) {
+            $results['users_query_error'] = $ue->getMessage();
+        }
+
+        // Auto-run migrations and seeds if tables are empty or migrate requested
+        if (count($tables) === 0 || request()->query('migrate') === 'yes') {
             \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             $results['migrate_output'] = \Illuminate\Support\Facades\Artisan::output();
 
             \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
             $results['seed_output'] = \Illuminate\Support\Facades\Artisan::output();
+
+            $results['users_count_after_seed'] = \App\Models\User::count();
         }
     } catch (\Throwable $e) {
         $results['db_connection'] = 'FAILED';
         $results['db_error'] = $e->getMessage();
         $results['db_error_class'] = get_class($e);
+        $results['db_host'] = config('database.connections.pgsql.host');
     }
 
-    // 3. Session & Cache Configuration
     $results['session_driver'] = config('session.driver');
     $results['cache_store'] = config('cache.default');
 
@@ -53,6 +62,10 @@ Route::get('/health-debug', function () {
     \Illuminate\Cookie\Middleware\EncryptCookies::class,
     \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
 ]);
+
+Route::get('/health-debug', function () {
+    return redirect('/api/debug-db');
+});
 
 Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])

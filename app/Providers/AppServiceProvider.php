@@ -58,5 +58,15 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Gate::define('view-users', function (\App\Models\User $user) {
             return $user->isAdmin();
         });
+
+        // Ensure tables exist on cloud runtime
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('users')) {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('AppServiceProvider auto-migration notice: ' . $e->getMessage());
+        }
     }
 }

@@ -7,6 +7,49 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::get('/health-debug', function () {
+    $results = [];
+
+    // 1. App Configuration
+    $results['app_key_set'] = !empty(config('app.key'));
+    $results['app_env'] = config('app.env');
+    $results['app_debug'] = config('app.debug');
+
+    // 2. Database Connection Test
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $results['db_connection'] = 'SUCCESS';
+        $results['db_driver'] = \Illuminate\Support\Facades\DB::connection()->getDriverName();
+        $results['db_database'] = \Illuminate\Support\Facades\DB::connection()->getDatabaseName();
+
+        // Check if tables exist
+        $tables = \Illuminate\Support\Facades\DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema='public'");
+        $results['tables_count'] = count($tables);
+        $results['tables'] = array_map(function ($t) {
+            return is_object($t) ? ($t->table_name ?? reset($t)) : ($t['table_name'] ?? reset($t));
+        }, $tables);
+
+        // Run migrations and seeds on demand if requested
+        if (request()->query('migrate') === 'yes') {
+            \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            $results['migrate_output'] = \Illuminate\Support\Facades\Artisan::output();
+
+            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+            $results['seed_output'] = \Illuminate\Support\Facades\Artisan::output();
+        }
+    } catch (\Throwable $e) {
+        $results['db_connection'] = 'FAILED';
+        $results['db_error'] = $e->getMessage();
+        $results['db_error_class'] = get_class($e);
+    }
+
+    // 3. Session & Cache Configuration
+    $results['session_driver'] = config('session.driver');
+    $results['cache_store'] = config('cache.default');
+
+    return response()->json($results, 200, [], JSON_PRETTY_PRINT);
+});
+
 Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');

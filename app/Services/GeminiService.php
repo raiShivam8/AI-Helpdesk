@@ -52,7 +52,7 @@ class GeminiService
      */
     public function getModel(): string
     {
-        $invalidModels = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+        $invalidModels = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.1-pro'];
 
         $dbModel = Cache::get('system_gemini_model');
         if (!empty($dbModel)) {
@@ -150,12 +150,10 @@ class GeminiService
 
         $fallbackModels = array_values(array_unique([
             $primaryModel,
-            'gemini-2.5-flash',
-            'gemini-2.0-flash',
-            'gemini-1.5-flash',
-            'gemini-2.5-flash-lite',
-            'gemini-1.5-pro',
-            'gemini-2.5-pro',
+            'gemini-3.8-flash',
+            'gemini-3.7-flash',
+            'gemini-3.6-flash',
+            'gemini-3.1-pro',
         ]));
 
         $payload = array_merge([

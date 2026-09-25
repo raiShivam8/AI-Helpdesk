@@ -59,7 +59,9 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'database' => (env('DB_CONNECTION') === 'sqlite' && env('DB_DATABASE') && (str_ends_with(env('DB_DATABASE'), '.sqlite') || str_contains(env('DB_DATABASE'), '/')))
+                ? env('DB_DATABASE')
+                : database_path('database.sqlite'),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,

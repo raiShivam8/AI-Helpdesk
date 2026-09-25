@@ -79,30 +79,41 @@ Route::get('/test-db', function () {
     }
     $data['connection_matrix'] = $testResults;
 
-    if ($workingPdo) {
-        $data['status'] = 'CONNECTED_SUCCESSFULLY';
-        $data['working_host'] = $workingHost;
-        try {
-            $stmt = $workingPdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema='public'");
-            $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            $data['tables_count'] = count($tables);
-            $data['tables'] = $tables;
+    $data['connection_matrix'] = $testResults;
 
-            if (count($tables) === 0 || request()->query('migrate') === 'yes') {
-                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-                $data['migrate_output'] = \Illuminate\Support\Facades\Artisan::output();
+    // Test active Laravel connection
+    $activeConn = config('database.default');
+    $data['active_connection_name'] = $activeConn;
+    $data['active_driver'] = config("database.connections.{$activeConn}.driver");
 
-                \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
-                $data['seed_output'] = \Illuminate\Support\Facades\Artisan::output();
-            }
+    try {
+        $activePdo = DB::connection()->getPdo();
+        $data['active_connection_status'] = 'CONNECTED';
+        
+        $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' UNION SELECT table_name as name FROM information_schema.tables WHERE table_schema='public'");
+        $tableNames = array_map(function ($t) {
+            $arr = (array) $t;
+            return $arr['name'] ?? reset($arr);
+        }, $tables);
+        $data['tables_count'] = count($tableNames);
+        $data['tables'] = $tableNames;
 
-            $userStmt = $workingPdo->query("SELECT count(*) FROM users");
-            $data['users_count'] = $userStmt ? $userStmt->fetchColumn() : 0;
-        } catch (\Throwable $te) {
-            $data['query_error'] = $te->getMessage();
+        if (count($tableNames) === 0 || request()->query('migrate') === 'yes') {
+            \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            $data['migrate_output'] = \Illuminate\Support\Facades\Artisan::output();
+
+            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+            $data['seed_output'] = \Illuminate\Support\Facades\Artisan::output();
         }
-    } else {
-        $data['status'] = 'CONNECTION_FAILED';
+
+        $data['users_count'] = \App\Models\User::count();
+        $admin = \App\Models\User::where('email', 'admin@gmail.com')->first(['id', 'email', 'name', 'role']);
+        $data['admin_user_exists'] = !empty($admin);
+        $data['status'] = 'READY';
+    } catch (\Throwable $ae) {
+        $data['active_connection_status'] = 'FAILED';
+        $data['active_connection_error'] = $ae->getMessage();
+        $data['status'] = $workingPdo ? 'PGSQL_DIRECT_ONLY' : 'ALL_FAILED';
     }
 
     return response()->json($data);

@@ -148,7 +148,9 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 storage bootstrap/cache
+    && mkdir -p storage bootstrap/cache database \
+    && touch database/database.sqlite \
+    && chmod -R 777 storage bootstrap/cache database
 
 
 

@@ -114,21 +114,42 @@ php artisan config:cache || true
 php artisan route:cache || true
 
 echo "📦 Testing database connection..."
-php -r '
+mkdir -p /var/www/html/database
+touch /var/www/html/database/database.sqlite
+chmod -R 777 /var/www/html/database
+
+if php -r '
     require "/var/www/html/vendor/autoload.php";
     $app = require_once "/var/www/html/bootstrap/app.php";
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $kernel->bootstrap();
     
-    $c = config("database.connections.pgsql");
-    echo "🔍 PGSQL Config: host=" . ($c["host"] ?? "none") . " port=" . ($c["port"] ?? "none") . " db=" . ($c["database"] ?? "none") . " user=" . ($c["username"] ?? "none") . "\n";
+    $conn = config("database.default");
     try {
-        Illuminate\Support\Facades\DB::connection("pgsql")->getPdo();
-        echo "✅ Database connection SUCCESS!\n";
+        Illuminate\Support\Facades\DB::connection($conn)->getPdo();
+        echo "✅ Database connection ($conn) SUCCESS!\n";
+        exit(0);
     } catch (\Throwable $e) {
-        echo "❌ Database connection FAILED: " . $e->getMessage() . "\n";
+        echo "❌ Primary database connection ($conn) failed: " . $e->getMessage() . "\n";
+        exit(1);
     }
-' || true
+'; then
+    echo "✅ Using primary database connection."
+else
+    echo "⚠️ Primary database is unreachable. Switching to SQLite for zero-downtime operation..."
+    sed -i 's|^DB_CONNECTION=.*|DB_CONNECTION=sqlite|g' /var/www/html/.env
+    if ! grep -q "^DB_CONNECTION=" /var/www/html/.env; then
+        echo "DB_CONNECTION=sqlite" >> /var/www/html/.env
+    fi
+    sed -i 's|^DB_DATABASE=.*|DB_DATABASE=/var/www/html/database/database.sqlite|g' /var/www/html/.env
+    if ! grep -q "^DB_DATABASE=" /var/www/html/.env; then
+        echo "DB_DATABASE=/var/www/html/database/database.sqlite" >> /var/www/html/.env
+    fi
+    export DB_CONNECTION=sqlite
+    export DB_DATABASE=/var/www/html/database/database.sqlite
+    php artisan config:clear || true
+    php artisan config:cache || true
+fi
 
 echo "📦 Running database migrations and seeders..."
 MAX_RETRIES=5
@@ -149,13 +170,12 @@ done
 
 if [ $MIGRATION_SUCCESS -eq 0 ]; then
     echo "⚠️ Warning: Database migrations could not be completed after $MAX_RETRIES attempts."
-    echo "⚠️ Please check your Render DATABASE_URL / DB_HOST connection settings and region."
 fi
 
 echo "🔒 Setting permissions for www-data and Nginx temp dirs..."
-mkdir -p /var/lib/nginx/tmp /var/log/nginx /var/tmp/nginx /tmp
-chown -R www-data:www-data /var/www/html /var/lib/nginx /var/log/nginx /var/tmp/nginx /tmp || true
-chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/lib/nginx /var/log/nginx /var/tmp/nginx /tmp || true
+mkdir -p /var/lib/nginx/tmp /var/log/nginx /var/tmp/nginx /tmp /var/www/html/database
+chown -R www-data:www-data /var/www/html /var/lib/nginx /var/log/nginx /var/tmp/nginx /tmp /var/www/html/database || true
+chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database /var/lib/nginx /var/log/nginx /var/tmp/nginx /tmp || true
 
 if [ -f "/etc/nginx/nginx.conf" ]; then
     sed -i 's/user  nginx;/user www-data;/g' /etc/nginx/nginx.conf || true

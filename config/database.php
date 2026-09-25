@@ -3,6 +3,38 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+$resolveRenderHost = static function (string $host): string {
+    if (str_starts_with($host, 'dpg-') && !str_contains($host, '.')) {
+        if (gethostbyname($host) === $host) {
+            $regions = ['oregon', 'frankfurt', 'singapore', 'ohio', 'virginia'];
+            foreach ($regions as $region) {
+                $candidate = "{$host}.{$region}-postgres.render.com";
+                if (gethostbyname($candidate) !== $candidate) {
+                    return $candidate;
+                }
+            }
+            return "{$host}.oregon-postgres.render.com";
+        }
+    }
+    return $host;
+};
+
+$normalizeDatabaseUrl = static function (?string $url) use ($resolveRenderHost): ?string {
+    if (empty($url) || !is_string($url) || str_starts_with($url, '${')) {
+        return null;
+    }
+
+    if (preg_match('/@(dpg-[a-z0-9]+-a)(:[0-9]+|\/|$)/i', $url, $matches)) {
+        $bareHost = $matches[1];
+        $resolvedHost = $resolveRenderHost($bareHost);
+        if ($resolvedHost !== $bareHost) {
+            $url = str_replace("@{$bareHost}", "@{$resolvedHost}", $url);
+        }
+    }
+
+    return $url;
+};
+
 return [
 
     /*
@@ -86,8 +118,14 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            'url' => (is_string(env('DB_URL')) && !str_starts_with(env('DB_URL'), '${')) ? env('DB_URL') : ((is_string(env('DATABASE_URL')) && !str_starts_with(env('DATABASE_URL'), '${')) ? env('DATABASE_URL') : null),
-            'host' => (is_string(env('DB_HOST')) && !str_starts_with(env('DB_HOST'), '${')) ? env('DB_HOST') : '127.0.0.1',
+            'url' => $normalizeDatabaseUrl(
+                (is_string(env('DB_URL')) && !str_starts_with(env('DB_URL'), '${'))
+                    ? env('DB_URL')
+                    : ((is_string(env('DATABASE_URL')) && !str_starts_with(env('DATABASE_URL'), '${')) ? env('DATABASE_URL') : null)
+            ),
+            'host' => $resolveRenderHost(
+                (is_string(env('DB_HOST')) && !str_starts_with(env('DB_HOST'), '${')) ? env('DB_HOST') : '127.0.0.1'
+            ),
             'port' => (is_string(env('DB_PORT')) && is_numeric(env('DB_PORT'))) ? env('DB_PORT') : '5432',
             'database' => (is_string(env('DB_DATABASE')) && !str_starts_with(env('DB_DATABASE'), '${')) ? env('DB_DATABASE') : 'helpdesk',
             'username' => (is_string(env('DB_USERNAME')) && !str_starts_with(env('DB_USERNAME'), '${')) ? env('DB_USERNAME') : 'postgres',

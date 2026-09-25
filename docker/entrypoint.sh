@@ -45,6 +45,58 @@ for v in GEMINI_API_KEY GOOGLE_API_KEY GEMINI_KEY GEMINI_MODEL GEMINI_TIMEOUT GE
     sync_env_var "$v"
 done
 
+# Normalize bare Render PostgreSQL internal host (dpg-*-a) if unresolvable
+if [ -n "$DATABASE_URL" ] || [ -n "$DB_HOST" ]; then
+    RESOLVED_URL=$(php -r '
+        $u = getenv("DATABASE_URL") ?: "";
+        if ($u && preg_match("/@(dpg-[a-z0-9]+-a)(:[0-9]+|\/|$)/i", $u, $m)) {
+            $h = $m[1];
+            if (gethostbyname($h) === $h) {
+                $target = "{$h}.oregon-postgres.render.com";
+                foreach (["oregon", "frankfurt", "singapore", "ohio", "virginia"] as $r) {
+                    $c = "{$h}.{$r}-postgres.render.com";
+                    if (gethostbyname($c) !== $c) { $target = $c; break; }
+                }
+                echo str_replace("@" . $h, "@" . $target, $u);
+            }
+        }
+    ' 2>/dev/null || true)
+
+    if [ -n "$RESOLVED_URL" ]; then
+        export DATABASE_URL="$RESOLVED_URL"
+        if grep -q "^DATABASE_URL=" /var/www/html/.env 2>/dev/null; then
+            sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${RESOLVED_URL}|g" /var/www/html/.env
+        else
+            echo "DATABASE_URL=${RESOLVED_URL}" >> /var/www/html/.env
+        fi
+        echo "🌐 Auto-resolved Render DATABASE_URL with reachable host domain."
+    fi
+
+    RESOLVED_HOST=$(php -r '
+        $h = getenv("DB_HOST") ?: "";
+        if ($h && str_starts_with($h, "dpg-") && !str_contains($h, ".")) {
+            if (gethostbyname($h) === $h) {
+                $target = "{$h}.oregon-postgres.render.com";
+                foreach (["oregon", "frankfurt", "singapore", "ohio", "virginia"] as $r) {
+                    $c = "{$h}.{$r}-postgres.render.com";
+                    if (gethostbyname($c) !== $c) { $target = $c; break; }
+                }
+                echo $target;
+            }
+        }
+    ' 2>/dev/null || true)
+
+    if [ -n "$RESOLVED_HOST" ]; then
+        export DB_HOST="$RESOLVED_HOST"
+        if grep -q "^DB_HOST=" /var/www/html/.env 2>/dev/null; then
+            sed -i "s|^DB_HOST=.*|DB_HOST=${RESOLVED_HOST}|g" /var/www/html/.env
+        else
+            echo "DB_HOST=${RESOLVED_HOST}" >> /var/www/html/.env
+        fi
+        echo "🌐 Auto-resolved Render DB_HOST to ${RESOLVED_HOST}."
+    fi
+fi
+
 # Generate APP_KEY if missing in environment
 if [ -z "$APP_KEY" ]; then
     echo "🔑 APP_KEY is empty. Generating key..."

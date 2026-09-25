@@ -90,11 +90,7 @@ Route::get('/test-db', function () {
         $activePdo = DB::connection()->getPdo();
         $data['active_connection_status'] = 'CONNECTED';
         
-        $tables = DB::select("SELECT name FROM sqlite_master WHERE type='table' UNION SELECT table_name as name FROM information_schema.tables WHERE table_schema='public'");
-        $tableNames = array_map(function ($t) {
-            $arr = (array) $t;
-            return $arr['name'] ?? reset($arr);
-        }, $tables);
+        $tableNames = \Illuminate\Support\Facades\Schema::getTableListing();
         $data['tables_count'] = count($tableNames);
         $data['tables'] = $tableNames;
 

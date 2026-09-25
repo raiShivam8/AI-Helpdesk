@@ -673,83 +673,49 @@
                     method="POST"
                     action="{{ route('tickets.replies.store', $ticket) }}"
                     enctype="multipart/form-data"
-                    x-data="{
-                        body: {!! json_encode(old('body', '')) !!},
-                        charCount: {{ strlen(old('body', '')) }},
-                        fileName: null,
-                        fileSize: null,
-                        isImage: false,
-                        isPolishing: false,
-                        polishError: null,
-                        handleFile(e) {
-                            const file = e.target.files[0];
-                            if (file) {
-                                this.fileName = file.name;
-                                this.fileSize = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-                                this.isImage = file.type.startsWith('image/');
-                            } else {
-                                this.clearFile();
-                            }
-                        },
-                        clearFile() {
-                            this.fileName = null;
-                            this.fileSize = null;
-                            this.isImage = false;
-                            $refs.fileInput.value = '';
-                        },
-                        async polish() {
-                            if (!this.body || this.body.trim().length === 0 || this.isPolishing) return;
-                            this.isPolishing = true;
-                            this.polishError = null;
-                            try {
-                                const response = await fetch('{{ route('tickets.polish-reply', $ticket) }}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Accept': 'application/json',
-                                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                    },
-                                    body: JSON.stringify({ body: this.body.trim() })
-                                });
-                                
-                                let data = null;
-                                const contentType = response.headers.get('content-type');
-                                if (contentType && contentType.includes('application/json')) {
-                                    data = await response.json();
-                                }
-                                
-                                if (!response.ok) {
-                                    const errorMsg = data && (data.error || data.message)
-                                        ? (data.error || data.message)
-                                        : `Server returned error status ${response.status}: ${response.statusText || 'Unknown error'}`;
-                                    throw new Error(errorMsg);
-                                }
-                                
-                                if (!data || !data.polished) {
-                                    throw new Error('Invalid response received from the server.');
-                                }
-                                
-                                this.body = data.polished;
-                                this.charCount = this.body.length;
-                            } catch (err) {
-                                this.polishError = err.message;
-                            } finally {
-                                this.isPolishing = false;
-                            }
-                        }
-                    }"
+                    x-data="replyFormHandler()"
                 >
                     @csrf
 
                     {{-- Error banner for API failure --}}
-                    <div x-show="polishError" x-cloak class="mb-4 p-3.5 bg-red-50 border border-red-200 text-xs text-red-800 rounded-xl flex items-center justify-between shadow-sm">
-                        <div class="flex items-center gap-2">
+                    <div x-show="polishError" x-cloak class="mb-3.5 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 text-xs text-red-800 dark:text-red-300 rounded-xl flex items-center justify-between shadow-xs">
+                        <div class="flex items-center gap-2 min-w-0">
                             <svg class="w-4 h-4 text-red-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
                             </svg>
-                            <span x-text="polishError"></span>
+                            <span class="truncate" x-text="polishError"></span>
                         </div>
-                        <button type="button" @click="polishError = null" class="text-red-600 hover:text-red-900 font-bold ml-3 text-sm">&times;</button>
+                        <button type="button" @click="polishError = null" class="text-red-600 hover:text-red-900 dark:text-red-400 font-bold ml-3 text-sm">&times;</button>
+                    </div>
+
+                    {{-- Friendly Notice (e.g. empty draft) --}}
+                    <div x-show="polishNotice" x-cloak class="mb-3.5 p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 rounded-xl flex items-center justify-between shadow-xs">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="truncate" x-text="polishNotice"></span>
+                        </div>
+                        <button type="button" @click="polishNotice = null" class="text-amber-600 hover:text-amber-900 dark:text-amber-400 font-bold ml-3 text-sm">&times;</button>
+                    </div>
+
+                    {{-- Success banner with optional Undo --}}
+                    <div x-show="polishSuccess" x-cloak class="mb-3.5 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center justify-between shadow-xs">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span x-text="polishSuccess"></span>
+                            <button
+                                type="button"
+                                x-show="previousBody !== null"
+                                @click="undoPolish()"
+                                class="ml-2 font-bold underline text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-200 cursor-pointer text-xs"
+                            >
+                                Undo
+                            </button>
+                        </div>
+                        <button type="button" @click="polishSuccess = null" class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 font-bold ml-3 text-sm">&times;</button>
                     </div>
 
                     <div class="mb-4">
@@ -822,7 +788,7 @@
 
                         {{-- Character counter --}}
                         <p class="mt-1.5 text-xs text-slate-400 text-right">
-                            <span x-text="charCount"></span> / 2,000
+                            <span x-text="charCount">{{ strlen(old('body', '')) }}</span> / 2,000
                         </p>
                     </div>
 
@@ -834,12 +800,12 @@
                             Stored as <strong class="font-semibold text-indigo-600">{{ \App\Enums\SenderType::Agent->label() }}</strong> reply.
                         </p>
 
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2.5">
                             {{-- Single Unified Attachment Button (File & Image) --}}
                             <button
                                 type="button"
                                 @click="$refs.fileInput.click()"
-                                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition duration-150"
+                                class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition duration-150"
                                 title="Attach File or Image (JPG, PNG, PDF, DOC, ZIP)"
                             >
                                 <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -851,10 +817,12 @@
                             {{-- Polish Message Button --}}
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold rounded-lg border border-purple-200 dark:border-purple-800/80 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/60 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-2xs cursor-pointer"
-                                :disabled="!body || body.trim().length === 0 || isPolishing"
+                                id="polish-reply-btn"
+                                class="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl border border-purple-200 dark:border-purple-800/80 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 shadow-xs cursor-pointer"
+                                style="min-width: 142px; min-height: 38px;"
+                                :disabled="isPolishing"
                                 @click="polish()"
-                                title="Polish draft message with Gemini AI"
+                                title="Polish message with Gemini AI"
                             >
                                 <svg x-show="isPolishing" x-cloak class="animate-spin h-4 w-4 text-purple-600 dark:text-purple-300 shrink-0" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1189,4 +1157,105 @@
             </div>
         </div>
     </div>
+
+    {{-- Reply Form Handler Script --}}
+    <script>
+        function replyFormHandler() {
+            return {
+                body: @json(old('body', '')),
+                charCount: {{ strlen(old('body', '')) }},
+                fileName: null,
+                fileSize: null,
+                isImage: false,
+                isPolishing: false,
+                polishError: null,
+                polishNotice: null,
+                polishSuccess: null,
+                previousBody: null,
+
+                handleFile(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        this.fileName = file.name;
+                        this.fileSize = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+                        this.isImage = file.type.startsWith('image/');
+                    } else {
+                        this.clearFile();
+                    }
+                },
+                clearFile() {
+                    this.fileName = null;
+                    this.fileSize = null;
+                    this.isImage = false;
+                    if (this.$refs.fileInput) {
+                        this.$refs.fileInput.value = '';
+                    }
+                },
+                async polish() {
+                    this.polishError = null;
+                    this.polishNotice = null;
+                    this.polishSuccess = null;
+
+                    if (!this.body || this.body.trim().length === 0) {
+                        this.polishNotice = 'Please type a draft message first in the reply box so AI can polish it into a professional message.';
+                        if (this.$refs.replyTextarea) {
+                            this.$refs.replyTextarea.focus();
+                        }
+                        setTimeout(() => { this.polishNotice = null; }, 5000);
+                        return;
+                    }
+
+                    if (this.isPolishing) return;
+                    this.isPolishing = true;
+
+                    try {
+                        const response = await fetch('{{ route('tickets.polish-reply', $ticket) }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ body: this.body.trim() })
+                        });
+
+                        let data = null;
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            data = await response.json();
+                        }
+
+                        if (!response.ok) {
+                            const errorMsg = data && (data.error || data.message)
+                                ? (data.error || data.message)
+                                : ('Server error: status ' + response.status);
+                            throw new Error(errorMsg);
+                        }
+
+                        if (!data || !data.polished) {
+                            throw new Error('Invalid response received from server.');
+                        }
+
+                        this.previousBody = this.body;
+                        this.body = data.polished;
+                        this.charCount = this.body.length;
+                        this.polishSuccess = 'Message polished into a professional reply!';
+                        setTimeout(() => { this.polishSuccess = null; }, 7000);
+                    } catch (err) {
+                        this.polishError = err.message || 'Failed to polish reply with AI.';
+                    } finally {
+                        this.isPolishing = false;
+                    }
+                },
+                undoPolish() {
+                    if (this.previousBody !== null) {
+                        this.body = this.previousBody;
+                        this.charCount = this.body.length;
+                        this.previousBody = null;
+                        this.polishSuccess = null;
+                    }
+                }
+            };
+        }
+    </script>
 </x-app-layout>

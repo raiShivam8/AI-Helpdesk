@@ -147,6 +147,7 @@ class GeminiService
 
         // Primary model and verified fallback models for high demand / rate limit resilience
         $primaryModel = $this->getModel();
+
         $fallbackModels = array_values(array_unique([
             $primaryModel,
             'gemini-2.5-flash',
@@ -279,10 +280,15 @@ class GeminiService
             }
         }
 
-        $prompt = "You are a professional customer support assistant.\n" .
-                  "Your task is to polish the following draft reply for a helpdesk ticket to make it professional, polite, clear, empathetic, and grammatically correct while preserving its original meaning and all factual details.\n" .
-                  "Return ONLY the polished message. Do not include quotes, markdown backticks (```), prefixes, or explanatory conversational filler.\n\n" .
-                  "Draft Reply:\n" . $text;
+        $prompt = "You are a professional customer support specialist for an enterprise helpdesk.\n" .
+                  "Your task is to rewrite and polish the following draft reply into a high-quality, professional, courteous, empathetic, and clear customer support response.\n\n" .
+                  "Key Guidelines:\n" .
+                  "1. Tone: Polite, empathetic, warm, and professional.\n" .
+                  "2. Structure: Start with a courteous greeting (e.g. 'Hello,' or 'Dear Customer,'), clearly explain the solution or answer, provide actionable next steps, and finish with a professional closing (e.g. 'Best regards,\nSupport Team').\n" .
+                  "3. Translation & Refinement: If the draft is written in informal language, Hinglish, shorthand, or rough notes, translate and elevate it into fluent, professional customer support English while preserving all factual information.\n" .
+                  "4. Formatting: Keep paragraphs clean and readable. Use bullet points if listing multiple steps.\n" .
+                  "5. Output format: Return ONLY the final polished message text. Do NOT include greetings to the agent, notes, quotes, or markdown code blocks (```).\n\n" .
+                  "Draft Message:\n" . $text;
 
         $reply = $this->generateContent($prompt);
 
